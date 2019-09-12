@@ -1,0 +1,66 @@
+function  LegendBoxing_SketchStep1( src,evn,axMain )
+%UNTITLED3 Summary of this function goes here
+%   Detailed explanation goes here
+% axMain.UserData
+       axes(axMain);
+%        evn
+       Rulers= linspace(0,1,7) ;
+       Locats= sum(evn.IntersectionPoint(1)>=Rulers);
+       
+%        [icondata,iconcmap] = imread('trees.tif'); 
+       
+       if evn.IntersectionPoint(2)>0
+           CreateStruct.Interpreter = 'tex';
+           CreateStruct.WindowStyle = 'modal';
+           STR={'\fontsize{11}\bf(Optional)\rmSTEP files may contain several construction lines which are not used for stuctures.';
+               'This step is for deciding to add more lines for trusses or delete some lines.'  ;
+               'Use the togglebuttons on top-right to select two lines with numbers of equal points.';
+               'Select one point on each edge and Add a truss.';
+               '';
+               'When done, click ''finish''' ;
+               
+
+              
+               
+               } ;
+                                 
+                      f = msgbox(STR ,'Instructions', 'help' ,CreateStruct);    
+
+       end
+%        
+%        if evn.Button==1
+%            switch Locats
+%                case 1
+%                    ax.XLim= ax.XLim - interval ;      
+%                case 2
+%                      ax.XLim= ax.XLim + interval ;     
+%                case 3
+%                      ax.YLim= ax.YLim - interval ;
+%                case 4
+%                      ax.YLim= ax.YLim + interval ;
+%                case 5
+%                      ax.ZLim= ax.ZLim - interval ;
+%                case 6
+%                      ax.ZLim= ax.ZLim + interval ;
+%            end
+%        elseif evn.Button==2
+%            switch Locats
+%                case 1
+%                    ax.XLim= (ax.XLim -mean(ax.XLim))/R + mean(ax.XLim)   ;   
+%                case 2
+%                    ax.XLim= R*(ax.XLim -mean(ax.XLim))+ mean(ax.XLim)   ;   
+%                case 3
+%                    ax.YLim= (ax.YLim -mean(ax.YLim))/R + mean(ax.YLim)   ;    
+%                case 4
+%                    ax.YLim= R*(ax.YLim -mean(ax.YLim))+ mean(ax.YLim)   ;     
+%                case 5
+%                      ax.ZLim= (ax.ZLim -mean(ax.ZLim))/R + mean(ax.ZLim)   ;     
+%                case 6
+%                      ax.ZLim= R*(ax.ZLim -mean(ax.ZLim))+ mean(ax.ZLim)   ;     
+%            end 
+%        else
+%            ax.XLim=ax.XLim+0.01 ;
+%        end
+
+end
+
