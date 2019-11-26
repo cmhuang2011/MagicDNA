@@ -1,7 +1,7 @@
 # MagicDNA
 DNA origami design tool
 
-![Alt Text](https://github.com/cmhuang2011/MagicDNA/tree/master/demo/AsssemblyTest.gif)
+![](https://github.com/cmhuang2011/MagicDNA/tree/master/demo/AsssemblyTest.gif)
 
 MagicDNA software for designing multi-component DNA origami structure.
 
