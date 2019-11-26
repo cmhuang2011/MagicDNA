@@ -1,6 +1,8 @@
 # MagicDNA
 DNA origami design tool
 
+https://github.com/cmhuang2011/MagicDNA/tree/master/demo/AsssemblyTest.gif
+
 MagicDNA software for designing multi-component DNA origami structure.
 
 This developing software is temporarily called MagicDNA (Multi-component Assembling in Graphic Interface computational tool for DNA origami) and required MATLAB 2017a at least to run. MagicDNA has been packaged as a MATLAB app(MagicDNA_v1.5.mlappinstall) and can be installed with the attached package.
