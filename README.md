@@ -16,7 +16,7 @@ Required: MATLAB v2017a, Bioinformatics Toolbox, Statistics and Machine Learning
 Runtime version as standalone software may loose some functions and will be uploaded later.
 
 Tutorial download: https://www.dropbox.com/s/4f7t5hdiggmnf6f/MagicDNA_workshop.pptx?dl=0 
-
+YouTube channel for tutorial movies: https://www.youtube.com/channel/UCpI3shjsdy89Xg2iVt-ZYCw
 
 Question, comment, and suggestion to:
 Chao-Min Huang   
