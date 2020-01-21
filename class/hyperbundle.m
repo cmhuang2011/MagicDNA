@@ -1,5 +1,23 @@
 classdef hyperbundle <handle
     %hybrid for SQ and HC
+    % <MagicDNA (Multi-component Assembly in a Graphical Interface guided by Computation for DNA origami) is a software for designing multi-component DNA origami structures.>
+%     Copyright (C) <2020>  <Chao-Min Huang, Hai-Jun Su, and Carlos E. Castro>
+%     The Ohio State University 
+%     
+% 
+%     This program is free software: you can redistribute it and/or modify
+%     it under the terms of the GNU General Public License as published by
+%     the Free Software Foundation, either version 3 of the License, or
+%     (at your option) any later version.
+% 
+%     This program is distributed in the hope that it will be useful,
+%     but WITHOUT ANY WARRANTY; without even the implied warranty of
+%     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%     GNU General Public License for more details.
+% 
+%     You should have received a copy of the GNU General Public License
+%     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
     %   Detailed explanation goes here
     
     properties
@@ -20,7 +38,7 @@ classdef hyperbundle <handle
         scafC5=[];    %index use RTable column 5
         ScafdigitSQ=[]
         ScafdigitHC=[]
-        ScafAllBase=[];   %Sep 26, mrDNA
+        ScafAllBase=[];   % 08/12/2019, multi-scaf
         AllScafXover=[];    % Nov 13 2018 , for zigzag scaf routing
         
         
@@ -47,7 +65,7 @@ classdef hyperbundle <handle
         SaveStapList3=[];  %use C5
         HeadOfStap=[];
         StapAllBase=[]; %Sep 26, mrDNA
-        
+        StapGraphBin=[]; % Sep 24 2019, show staple graph, for coloring chain, Update by FindStapGraph
         
         UConPlotHandle={};
         choice=[];
@@ -66,6 +84,12 @@ classdef hyperbundle <handle
         
         SavePremPair; SavePremPairManual ;
         BundleAdjM;
+        %--------Multi-Scaf 08/12/2019
+        SaveBlockAdjacency ; % for multi-scaffold , cell arraay(N=#ofBundle) contains undesired cylinder pairs in bundles
+        SaveBlockZRange ;  % Use Edit Bundle to assgin where in a bundle without Xovers.
+        OrgBlockAdj;  % [B, C1 ,B ,C2] get property once to avoid querry in loops
+        SaveInternalXovers ;  % Use Edit Bundle to assgin internal Xovers as forced connections.
+        
         
         CompJointInfo=[];
         UserWantOH=[];
@@ -80,10 +104,24 @@ classdef hyperbundle <handle
         ForcedConnectListC4;   %express in Column 4
         ForcedConnectListC5;   %express in Column 5
         skipBase ;
+        scafC5All ;     % pseudo scaffold, put multiple scaffold together
+        pSeqAll ;
     end
     
     methods
+        function pSeqAll=get.pSeqAll(obj)
+            pSeqAll= obj.pSeq{1}  ;
+            for k = 2: length(obj.pSeq)
+                pSeqAll= [pSeqAll ,   obj.pSeq{k} ] ;
+            end
+        end
         
+        function Output=get.scafC5All(obj)
+            Output= obj.scafC5{1}  ;
+            for k = 2: length(obj.scafC5)
+                Output= [Output ;   obj.scafC5{k} ] ;
+            end
+        end
         
         function total_mem = get_mem(obj)
             props = properties(obj);
@@ -97,7 +135,13 @@ classdef hyperbundle <handle
         
         function Skipbase=get.skipBase(obj)
             
-            BaseRoute = interpolateBase( obj.scafC5 ) ;
+            BaseRoute=[];
+            %             for k=1: length(obj.scafC5All)
+            BaseRouteOneSCaf = interpolateBase( obj.scafC5All ) ;
+            BaseRoute=[ BaseRoute ;BaseRouteOneSCaf];
+            %             end
+            
+            
             MaxBase =  size(obj.ScafdigitHC{1} ,1) ;
             skipPattern1=9:60:MaxBase;   % skip mod2 =0
             skipPattern2=39:60:MaxBase;
@@ -119,9 +163,12 @@ classdef hyperbundle <handle
                     
                 end
             end
+            
+            
             InherPosition = setdiff(InherPosition , [-1,-1],'rows') ;
             Skipbase=intersect(InherPosition, BaseRoute,'rows') ;
         end
+        
         
         function S=saveobj(obj)
             mc = ?hyperbundle ;        % get class infomation
@@ -140,6 +187,7 @@ classdef hyperbundle <handle
                         obj.(mc.PropertyList(k).Name)=S.(mc.PropertyList(k).Name);
                         
                     else
+                        obj.(mc.PropertyList(k).Name)= [];
                         debuggggg=22 ;
                     end
                 end
@@ -160,6 +208,15 @@ classdef hyperbundle <handle
                 fprintf(' OldData is true............. \n' ) ;
                 fprintf(' Please search forced-connection again \n' ) ;
             end
+            
+            %----Move old Single scaf into cell for multi-scaf, 08/12/2019
+            Fields={'ScafRouting','ScafGlobal','scafC4','scafC5','ScafAllBase','Scaf_fromCadDOM'} ;
+            if  ~iscell(obj.(Fields{1}))  % old formats for scaffold routing
+                for k = 1 : length(Fields)
+                    obj.(Fields{k})={ obj.(Fields{k})} ;
+                end
+            end
+            %-----------
             
         end
         
@@ -213,66 +270,85 @@ classdef hyperbundle <handle
         end
         
         function obj=ConvertScafSQ(obj)  %into digital form
-            SeqI=obj.ScafGlobal;
-            SeqI(:,2)=SeqI(:,2);   %+32*ones(size(SeqI(:,2)));  %in case of reach bottom bound
-            Seq=[SeqI(1:end-1,1:2) SeqI(2:end,1:2)];
-            Seq(:,2)= round(Seq(:,2));Seq(:,4)= round(Seq(:,4));
-            %             MCylinderIndex=size(obj.uniqueInplaneXY,1);
-            
             MCylinderIndex= length(unique(obj.RelateTable(:,4)))  ; % due to extend overhang
-            
             DCellList=cell(MCylinderIndex,1);
-            MM=max(max(Seq));
-            MM=32*(1+ceil(MM/32));   % found bug, Sep 18 2018
+            
+            SeqI = obj.ScafGlobal{1} ;
+            for k= 2: length(obj.ScafGlobal)
+                SeqI= [ SeqI ;  obj.ScafGlobal{k} ];
+            end
+            SeqIAll=SeqI;
+            SeqIAll(:,2)=SeqI(:,2);   %+32*ones(size(SeqI(:,2)));  %in case of reach bottom bound
+            SeqAll=[SeqIAll(1:end-1,1:2) SeqIAll(2:end,1:2)];
+            SeqAll(:,2)= round(SeqAll(:,2));SeqAll(:,4)= round(SeqAll(:,4));
+            
+            MM=max(max(SeqAll));
+            MM=32*(1+ceil(MM/32)) ;   % found bug, Sep 18 2018
             for i=1:MCylinderIndex   %create shell to store information
                 DCellList{i}=zeros(MM,4);
             end
-            C0=-1;  Z0=-1;
-            for i1=1:1:size(Seq,1)     % i1=1 3 5 7 ......
-                CylinderIndex=obj.RelateTable(Seq(i1,1),5);
-                CylinderIndex2=obj.RelateTable(Seq(i1,3),5);
-                if Seq(i1,2)>Seq(i1,4) &&  CylinderIndex==CylinderIndex2  %move down
-                    for j1=Seq(i1,2):-1:Seq(i1,4)
-                        if (i1==size(Seq,1))  && (j1==Seq(i1,4))
-                            DCellList{CylinderIndex}(j1,:)=[C0,Z0,-1,-1];
-                            break
+            
+            for scaf_j=  1:length(obj.ScafGlobal)
+                SeqI=obj.ScafGlobal{scaf_j};
+                SeqI(:,2)=SeqI(:,2);   %+32*ones(size(SeqI(:,2)));  %in case of reach bottom bound
+                Seq=[SeqI(1:end-1,1:2) SeqI(2:end,1:2)];
+                Seq(:,2)= round(Seq(:,2));Seq(:,4)= round(Seq(:,4));
+                %             MCylinderIndex=size(obj.uniqueInplaneXY,1);
+                
+                
+                %                 MM=max(max(Seq));
+                %                 MM=32*(1+ceil(MM/32));   % found bug, Sep 18 2018
+                %                 for i=1:MCylinderIndex   %create shell to store information
+                %                     DCellList{i}=zeros(MM,4);
+                %                 end
+                
+                C0=-1;  Z0=-1;
+                for i1=1:1:size(Seq,1)     % i1=1 3 5 7 ......
+                    CylinderIndex=obj.RelateTable(Seq(i1,1),5);
+                    CylinderIndex2=obj.RelateTable(Seq(i1,3),5);
+                    if Seq(i1,2)>Seq(i1,4) &&  CylinderIndex==CylinderIndex2  %move down
+                        for j1=Seq(i1,2):-1:Seq(i1,4)
+                            if (i1==size(Seq,1))  && (j1==Seq(i1,4))
+                                DCellList{CylinderIndex}(j1,:)=[C0,Z0,-1,-1];
+                                break
+                            end
+                            if    j1==Seq(i1,4)
+                            else
+                                C1= obj.RelateTable(Seq(i1,1),5 );
+                                ZNext=j1-1;
+                                DCellList{CylinderIndex}(j1,:)=[C0,Z0,C1,ZNext];
+                                C0=CylinderIndex;
+                                Z0=j1;
+                            end
                         end
-                        if    j1==Seq(i1,4)
-                        else
-                            C1= obj.RelateTable(Seq(i1,1),5 );
-                            ZNext=j1-1;
-                            DCellList{CylinderIndex}(j1,:)=[C0,Z0,C1,ZNext];
-                            C0=CylinderIndex;
-                            Z0=j1;
+                    elseif Seq(i1,2)<Seq(i1,4) &&  CylinderIndex==CylinderIndex2   %move up
+                        for j1=Seq(i1,2):1:Seq(i1,4)
+                            if (i1==size(Seq,1))  && (j1==Seq(i1,4))
+                                DCellList{CylinderIndex}(j1,:)=[C0,Z0,-1,-1];
+                                break
+                            end
+                            if    j1==Seq(i1,4)
+                            else
+                                C1= obj.RelateTable(Seq(i1,1) ,5 );
+                                ZNext=j1+1;
+                                DCellList{CylinderIndex}(j1,:)=[C0,Z0,C1,ZNext];
+                                C0=CylinderIndex;
+                                Z0=j1;
+                            end
                         end
+                    else    %  Xover
+                        C1= CylinderIndex2;    %  C1=  Seq(i1+1,3);
+                        ZNext=  Seq(i1,4);
+                        Z0=Seq(i1,2) ;
+                        DCellList{CylinderIndex}(Z0,:)=[C0,Z0,C1,ZNext]    ;
+                        C0=CylinderIndex;
                     end
-                elseif Seq(i1,2)<Seq(i1,4) &&  CylinderIndex==CylinderIndex2   %move up
-                    for j1=Seq(i1,2):1:Seq(i1,4)
-                        if (i1==size(Seq,1))  && (j1==Seq(i1,4))
-                            DCellList{CylinderIndex}(j1,:)=[C0,Z0,-1,-1];
-                            break
-                        end
-                        if    j1==Seq(i1,4)
-                        else
-                            C1= obj.RelateTable(Seq(i1,1) ,5 );
-                            ZNext=j1+1;
-                            DCellList{CylinderIndex}(j1,:)=[C0,Z0,C1,ZNext];
-                            C0=CylinderIndex;
-                            Z0=j1;
-                        end
-                    end
-                else    %  Xover
-                    C1= CylinderIndex2;    %  C1=  Seq(i1+1,3);
-                    ZNext=  Seq(i1,4);
-                    Z0=Seq(i1,2) ;
-                    DCellList{CylinderIndex}(Z0,:)=[C0,Z0,C1,ZNext]    ;
-                    C0=CylinderIndex;
                 end
-            end
-            for x=1:MCylinderIndex
-                for y=1:length(DCellList{x})
-                    if sum(DCellList{x}(y,:))==0
-                        DCellList{x}(y,:)=[-1 -1 -1 -1];
+                for x=1:MCylinderIndex
+                    for y=1:length(DCellList{x})
+                        if sum(DCellList{x}(y,:))==0
+                            DCellList{x}(y,:)=[-1 -1 -1 -1];
+                        end
                     end
                 end
             end
@@ -280,64 +356,84 @@ classdef hyperbundle <handle
         end  % end of ConvertScafSQ
         
         function obj=ConvertScafHC(obj)  %into digital form
-            SeqI=obj.ScafGlobal;
-            SeqI(:,2)=SeqI(:,2);   %+32*ones(size(SeqI(:,2)));  %in case of reach bottom bound
-            Seq=[SeqI(1:end-1,1:2) SeqI(2:end,1:2)];
-            Seq(:,2)= round(Seq(:,2));Seq(:,4)= round(Seq(:,4));
             MCylinderIndex= length(unique(obj.RelateTable(:,4)))  ; % due to extend overhang
-            %             MCylinderIndex=size(obj.uniqueInplaneXY,1);
             DCellList=cell(MCylinderIndex,1);
-            MM=max(max(Seq));
+            
+            SeqI = obj.ScafGlobal{1} ;
+            for k= 2: length(obj.ScafGlobal)
+                SeqI= [ SeqI ;  obj.ScafGlobal{k} ];
+            end
+            SeqIAll=SeqI;
+            SeqIAll(:,2)=SeqI(:,2);   %+32*ones(size(SeqI(:,2)));  %in case of reach bottom bound
+            SeqAll=[SeqIAll(1:end-1,1:2) SeqIAll(2:end,1:2)];
+            SeqAll(:,2)= round(SeqAll(:,2));SeqAll(:,4)= round(SeqAll(:,4));
+            
+            MM=max(max(SeqAll));
             MM=21*(1+ceil(MM/21)) ;   % found bug, Sep 18 2018
             for i=1:MCylinderIndex   %create shell to store information
                 DCellList{i}=zeros(MM,4);
             end
-            C0=-1;  Z0=-1;
-            for i1=1:1:size(Seq,1)     % i1=1 3 5 7 ......
-                CylinderIndex=obj.RelateTable(Seq(i1,1),5);
-                CylinderIndex2=obj.RelateTable(Seq(i1,3),5);
-                if Seq(i1,2)>Seq(i1,4) &&  CylinderIndex==CylinderIndex2  %move down
-                    for j1=Seq(i1,2):-1:Seq(i1,4)
-                        if (i1==size(Seq,1))  && (j1==Seq(i1,4))
-                            DCellList{CylinderIndex}(j1,:)=[C0,Z0,-1,-1];
-                            break
+            
+            
+            for scaf_j=  1:length(obj.ScafGlobal)
+                SeqI=obj.ScafGlobal{scaf_j};
+                SeqI(:,2)=SeqI(:,2);   %+32*ones(size(SeqI(:,2)));  %in case of reach bottom bound
+                Seq=[SeqI(1:end-1,1:2) SeqI(2:end,1:2)];
+                Seq(:,2)= round(Seq(:,2));Seq(:,4)= round(Seq(:,4));
+                
+                %                 MM=max(max(Seq));
+                %                 MM=21*(1+ceil(MM/21)) ;   % found bug, Sep 18 2018
+                %                 for i=1:MCylinderIndex   %create shell to store information
+                %                     DCellList{i}=zeros(MM,4);
+                %                 end
+                
+                C0=-1;  Z0=-1;
+                for i1=1:1:size(Seq,1)     % i1=1 3 5 7 ......
+                    CylinderIndex=obj.RelateTable(Seq(i1,1),5);
+                    CylinderIndex2=obj.RelateTable(Seq(i1,3),5);
+                    if Seq(i1,2)>Seq(i1,4) &&  CylinderIndex==CylinderIndex2  %move down
+                        for j1=Seq(i1,2):-1:Seq(i1,4)
+                            if (i1==size(Seq,1))  && (j1==Seq(i1,4))
+                                DCellList{CylinderIndex}(j1,:)=[C0,Z0,-1,-1];
+                                break
+                            end
+                            if    j1==Seq(i1,4)
+                            else
+                                C1= obj.RelateTable(Seq(i1,1),5 );
+                                ZNext=j1-1;
+                                DCellList{CylinderIndex}(j1,:)=[C0,Z0,C1,ZNext];
+                                C0=CylinderIndex;
+                                Z0=j1;
+                            end
                         end
-                        if    j1==Seq(i1,4)
-                        else
-                            C1= obj.RelateTable(Seq(i1,1),5 );
-                            ZNext=j1-1;
-                            DCellList{CylinderIndex}(j1,:)=[C0,Z0,C1,ZNext];
-                            C0=CylinderIndex;
-                            Z0=j1;
+                    elseif Seq(i1,2)<Seq(i1,4) &&  CylinderIndex==CylinderIndex2   %move up
+                        for j1=Seq(i1,2):1:Seq(i1,4)
+                            if (i1==size(Seq,1))  && (j1==Seq(i1,4))
+                                DCellList{CylinderIndex}(j1,:)=[C0,Z0,-1,-1];
+                                break
+                            end
+                            if    j1==Seq(i1,4)
+                            else
+                                C1= obj.RelateTable(Seq(i1,1) ,5 );
+                                ZNext=j1+1;
+                                DCellList{CylinderIndex}(j1,:)=[C0,Z0,C1,ZNext];
+                                C0=CylinderIndex;
+                                Z0=j1;
+                            end
                         end
+                    else    %  Xover
+                        C1= CylinderIndex2;    %  C1=  Seq(i1+1,3);
+                        ZNext=  Seq(i1,4);
+                        Z0=Seq(i1,2) ;
+                        DCellList{CylinderIndex}(Z0,:)=[C0,Z0,C1,ZNext]    ;
+                        C0=CylinderIndex;
                     end
-                elseif Seq(i1,2)<Seq(i1,4) &&  CylinderIndex==CylinderIndex2   %move up
-                    for j1=Seq(i1,2):1:Seq(i1,4)
-                        if (i1==size(Seq,1))  && (j1==Seq(i1,4))
-                            DCellList{CylinderIndex}(j1,:)=[C0,Z0,-1,-1];
-                            break
-                        end
-                        if    j1==Seq(i1,4)
-                        else
-                            C1= obj.RelateTable(Seq(i1,1) ,5 );
-                            ZNext=j1+1;
-                            DCellList{CylinderIndex}(j1,:)=[C0,Z0,C1,ZNext];
-                            C0=CylinderIndex;
-                            Z0=j1;
-                        end
-                    end
-                else    %  Xover
-                    C1= CylinderIndex2;    %  C1=  Seq(i1+1,3);
-                    ZNext=  Seq(i1,4);
-                    Z0=Seq(i1,2) ;
-                    DCellList{CylinderIndex}(Z0,:)=[C0,Z0,C1,ZNext]    ;
-                    C0=CylinderIndex;
                 end
-            end
-            for x=1:MCylinderIndex
-                for y=1:length(DCellList{x})
-                    if sum(DCellList{x}(y,:))==0
-                        DCellList{x}(y,:)=[-1 -1 -1 -1];
+                for x=1:MCylinderIndex
+                    for y=1:length(DCellList{x})
+                        if sum(DCellList{x}(y,:))==0
+                            DCellList{x}(y,:)=[-1 -1 -1 -1];
+                        end
                     end
                 end
             end
@@ -416,7 +512,8 @@ classdef hyperbundle <handle
                 MaxBase=size(DCMat,1);
                 
                 for cylindex=1: size(DCellList2,1)
-                    C5index=find( obj.RelateTable(:,5)== cylindex); C5index=C5index(1);
+                    C5index=find( obj.RelateTable(:,5)== cylindex);
+                    C5index=C5index(1);
                     Bundle=obj.containBundle{   obj.RelateTable(C5index,1)} ;
                     
                     Cyl2=obj.RelateTable(C5index,2) ;
@@ -484,9 +581,9 @@ classdef hyperbundle <handle
                     NNdat2=NNdat;
                     nBundle=max(obj.RelateTable(:,1));
                     if ismember(-1 , obj.RelateTable(:,2) ) % with overhange two more spacing
-                     extraCyl= 2*(nBundle) ;    
+                        extraCyl= 2*(nBundle) ;
                     else
-                    extraCyl= 2*(nBundle-1) ;
+                        extraCyl= 2*(nBundle-1) ;
                     end
                     ExtReTableC5= max(obj.RelateTable(:,5))+1: max(obj.RelateTable(:,5))+extraCyl  ;
                     RestofExt=zeros(3,extraCyl);
@@ -503,7 +600,7 @@ classdef hyperbundle <handle
                             for tw=1:2
                                 %                         NNdat2.vstrands{Cyli}.stap_colors={[-999,-888]};
                                 NNdat2.vstrands{Cyli}.stap_colors=cell(0,1);
-                                NNdat2.vstrands{Cyli}.num=ExtTab(extj,2);
+                                NNdat2.vstrands{Cyli}.num=ExtTab(extj,1);       %ExtTab(extj,2);
                                 NNdat2.vstrands{Cyli}.scafLoop=cell(0,1);
                                 NNdat2.vstrands{Cyli}.stap = -1*ones(MaxBase,4) ;
                                 NNdat2.vstrands{Cyli}.skip= zeros(1,MaxBase);
@@ -715,17 +812,17 @@ classdef hyperbundle <handle
             %                 TTRelateVec=Vec(index);
             %                 obj.RelateVec=union(TTRelateVec,[],'stable');
             
-            C3Expree=obj.ScafGlobal;
-            C4Express=zeros(size(C3Expree));
-            C5Express=zeros(size(C3Expree));
-            for k=1:size(C5Express,1)
-                cylC3=C3Expree(k,1);
-                C4Express(k,1:2)= [ RTable(cylC3,4)  C3Expree(k,2)] ;
-                C5Express(k,1:2)= [ RTable(cylC3,5)  C3Expree(k,2)] ;
-            end
-            
-            obj.scafC4=C4Express;
-            obj.scafC5=C5Express;
+            %             C3Expree=obj.ScafGlobal;
+            %             C4Express=zeros(size(C3Expree));
+            %             C5Express=zeros(size(C3Expree));
+            %             for k=1:size(C5Express,1)
+            %                 cylC3=C3Expree(k,1);
+            %                 C4Express(k,1:2)= [ RTable(cylC3,4)  C3Expree(k,2)] ;
+            %                 C5Express(k,1:2)= [ RTable(cylC3,5)  C3Expree(k,2)] ;
+            %             end
+            %
+            %             obj.scafC4=C4Express;
+            %             obj.scafC5=C5Express;
             
             C5AdjM=zeros(max(obj.RelateTable(:,5)) , max(obj.RelateTable(:,5)) );  %ex 40 cylinders
             
@@ -746,26 +843,369 @@ classdef hyperbundle <handle
             %             obj.ForcedConnectListC4;
         end   % end of fcn findRT
         
-        function obj=ConvertScafG(obj)
-            TT =obj.ScafRouting ;
-            ScafG =zeros(size(TT,1),2) ;
-            for i=1:size(TT,1)
-                [~,ind]=ismember(TT(i,1:2),  obj.GlobalCylinderIndex,'rows');
-                ScafG(i,1:2)=[ind,TT(i,3)];
+        function  get_ScafAllBase(obj) % get ScafAllBase in cells
+            ScafForScatterAll = [];
+            ScafForScatterIndividual = cell( length( obj.scafC5), 1)  ;  %scaffold 2D surf graphic handles in cell, later inserting spacing ~= C5
+            
+            for scaf_j = 1 : length( obj.scafC5)
+                CellMat= obj.scafC5{scaf_j} ;
+                BaseRoute = interpolateBase( CellMat ) ;
+                ScafForScatter= setdiff(BaseRoute , obj.skipBase,'rows' ,'stable') ;  %C5 notation
+                if scaf_j==1
+                    ScafForScatterAll=   ScafForScatter ;
+                else
+                    ScafForScatterAll=   [ScafForScatterAll; ScafForScatter] ;
+                end   
+                ScafForScatterIndividual{scaf_j} = ScafForScatter ;
             end
-            obj.ScafGlobal=ScafG;
-            RTable=obj.RelateTable;
-            C3Expree=obj.ScafGlobal;
-            C4Express=zeros(size(C3Expree));
-            C5Express=zeros(size(C3Expree));
-            for k=1:size(C5Express,1)
-                cylC3=C3Expree(k,1);
-                C4Express(k,1:2)= [ RTable(cylC3,4)  C3Expree(k,2)] ;
-                C5Express(k,1:2)= [ RTable(cylC3,5)  C3Expree(k,2)] ;
+            obj.ScafAllBase=ScafForScatterIndividual ;
+        end
+        
+        function StapToScaf_Corr_NBase_FollowObjFunc=InspectRouting_export(obj,   varargin)
+%             varargin : t_json,pStapleH,  plotH ,jsonSlider2
+            if ~isempty( obj.StapList3)  % evaluate cropping scaffold with staples
+                obj.get_ScafAllBase ;   % get ScafAllBase in cells
+                NOriGPairBCB = obj.ScafRouting; NBaseOri=0;
+                for k=1: length(NOriGPairBCB)
+                    BaseRoutOri = interpolateBase_ThreeCol( NOriGPairBCB{k} );
+                    nn= size(BaseRoutOri,1) ;
+                    NBaseOri=NBaseOri+nn ;
+                end
+                
+                fprintf('Checking sacffold and staple mapping. \n')
+                StapToScaf_Corr= zeros( length(obj.StapList3) ,  length(obj.ScafRouting)  ) ;
+                StapToScaf_Corr_NBase= zeros( length(obj.StapList3) ,  length(obj.ScafRouting)  ) ;
+                
+                %-------collect and stack scaffold for efficiency
+                AllScafBaseByBase =  zeros(NBaseOri , 4   ) ; cc=1;  % without considering skip [B C B scaf]
+                for scafj= 1:  length(obj.ScafRouting)
+                    BaseRout2 = interpolateBase_ThreeCol( obj.ScafRouting{scafj} );
+                    AllScafBaseByBase(cc:cc+size(BaseRout2,1)-1 ,:) =[BaseRout2, scafj*ones(size(BaseRout2,1),1)] ; cc=cc+size(BaseRout2,1) ;
+                end
+                
+                for stapi=  1:  length(obj.StapList3)
+                    C5rep_Stap = obj.StapList3{stapi} ;
+                    %        CornerC4 =ScafCornerC4{k} ;
+                    CornerBCB= [zeros(size(C5rep_Stap,1),1) ,C5rep_Stap ];
+                    [~,b]=ismember(C5rep_Stap(:,1),obj.RelateTable(:,5) ) ;
+                    CornerBCB(:,1:2) = obj.RelateTable(b,1:2) ;
+                    % NewScaf =CornerBCB;
+                    StapBaseBCB =  interpolateBase_ThreeCol( CornerBCB );
+                    [~,BB] = ismember(StapBaseBCB , AllScafBaseByBase(:,1:3) ,'rows'   ) ; BB=setdiff(BB,0);
+                    BelongToBundles = unique( AllScafBaseByBase(BB,4) )' ;
+                    StapToScaf_Corr(stapi, BelongToBundles) =1;
+                    
+                    [aa,bb]=hist(AllScafBaseByBase(BB,4),unique(AllScafBaseByBase(BB,4))) ;
+                    StapToScaf_Corr_NBase(stapi, bb) =aa ;
+                end
+                StapToScaf_Corr_NBase=StapToScaf_Corr_NBase(1: length(obj.StapList3), 1:length(obj.ScafRouting)  ) ;
+                [u,v] = find(StapToScaf_Corr_NBase~=0) ;
+                QQ= StapToScaf_Corr_NBase~=0 ;
+                Q=sum(QQ,2) ; %Q(randi(size(Q,1) ,5,1))=3 
+                
+%                  CircularH = InspectCircularMapping(obj ) ;
+%                 fH2 = figure(562) ;clf  ;fH2.WindowButtonDownFcn=''; fH2.WindowButtonMotionFcn='';
+%                 fH2.Name='Scaffold and Staple mapping (Without considering skip in SQ bundles' ; set(fH2,'NumberTitle','off');
+
+              
+%                 subplot(1,4,1) ;
+%                 ax=gca; CCorder =ax.ColorOrder;
+%                 for k = 1: length(Q)
+%                     v = [0 0; 1 0; 1 1; 0 1]+ [zeros(4,1), (k-1)*ones(4,1)]  ;
+%                     f = [1 2 3 4];                   
+%                     pH= patch('Faces',f,'Vertices',v,'FaceColor',CCorder( mod( Q(k)-1,size(CCorder,1))+1 ,:) ) ;
+%                     pH.EdgeColor=0.1*ones(1,3) ; pH.LineWidth=0.1 ;
+%                     CircularH{k}.Color =pH.FaceColor ;
+%                 end
+%                 axis ij ;
+%                 %                 fffH =figure(561) ; clf; %h = image(u,v,StapToScaf_Corr_NBase(u,v)) ;
+%                 subplot(1,4,[3 4]) ;
+%                 h = image(StapToScaf_Corr_NBase) ;
+%                 
+%                 
+% %                 axx =gca; colormap copper;
+%                 %                 h.ButtonDownFcn=@(src,evn)showMapping(src,evn,StapToScaf_Corr_NBase);
+% %                 fH2.WindowButtonDownFcn  =@(src,evn)showMapping(src,evn,StapToScaf_Corr_NBase,axx,ax ,Q ,CircularH , varargin);
+%                                 fH2.WindowButtonMotionFcn =@(src,evn)showMapping(src,evn,StapToScaf_Corr_NBase,axx,ax ,Q ,CircularH , varargin  );
+%                 colorbar;
+%                 xlabel('Scaffold index');     ylabel('Staple index');
+%                 ax.YLim=axx.YLim; ax.XTick=[]; axes(ax); ax.Color='none';
+%                 color = get(fH2,'Color');
+%                 set(gca,'XColor',[0 0 0],'YColor',[0 0 0 ],'TickDir','out')
+%                 axes(axx);  axx.FontSize =14;
+%                 
+                UU_Corr = unique(StapToScaf_Corr,'rows') ;
+                
+%                 %        RowsSingle = find(sum(UU_Corr,2)==1 ) ;
+%                 for k=1: size(UU_Corr, 1)
+%                     [QQ,~] = ismember(StapToScaf_Corr,UU_Corr(k,:),'rows'   ) ;
+%                     fprintf( ' Scaf mapping case [%s] has %i staples.   \n',  num2str(UU_Corr(k,:)),sum(QQ) ) ;
+%                 end
+%                 fprintf( '\n' ) ;
+                
+                CheckStapleOverMultipleScaf = sum(UU_Corr, 2) ;
+                for k= 1 : max(CheckStapleOverMultipleScaf)
+                    casesMultiScaf  = CheckStapleOverMultipleScaf==k ;
+                    [QQ2,~] = ismember(StapToScaf_Corr,UU_Corr(casesMultiScaf,:),'rows'   ) ;
+%                     fprintf( ' Staple across (%s) scaffolds =  %i staples.   \n',  num2str(k),sum(QQ2) ) ;
+                end
+                fprintf( '\n' ) ; TolScaf =size(StapToScaf_Corr ,2) ; StapToScaf_Corr_NBase_FollowObjFunc=zeros(1,size(StapToScaf_Corr ,2)) ;
+                for scafi = 1 : size(StapToScaf_Corr ,2)
+                    Ind_ThisScaf = StapToScaf_Corr(:,scafi)==1 ;
+                    Ind_ToOther =  StapToScaf_Corr(:,setdiff([1:TolScaf],  scafi    ))==1 ;
+                    Ind_ToOther = sum(Ind_ToOther,2)>0   ;
+                    ConnectStaple = and( Ind_ThisScaf ,Ind_ToOther) ;
+                    fprintf( 'Scaf %s has %i staples that connect to other scaffolds\n',  num2str(scafi),sum(ConnectStaple) ) ;
+                    StapToScaf_Corr_NBase_FollowObjFunc(scafi) =sum(ConnectStaple) ;
+                    
+                end
+%                 StapToScaf_Corr_NBase_FollowObjFunc; % ----only numerical
+%                 output for this function, remove unnecessary
+%                 visualization
+%                 StapToScaf_Corr_NBase; colorbar;
+%                 fffH.UserData.StapToScaf_Corr_NBase=StapToScaf_Corr_NBase ;
+                
+%                 hlink =linkprop([ax axx],{ 'YLim' }); % The axes should stay aligned
+%                 ax.UserData.hlink=hlink ;
+                
+            end
+           
+        end  % end of InspectRouting_export
+        
+        function InspectRouting(obj,   varargin)
+%             varargin : t_json,pStapleH,  plotH ,jsonSlider2
+            if ~isempty( obj.StapList3)  % evaluate cropping scaffold with staples
+                obj.get_ScafAllBase ;   % get ScafAllBase in cells
+                NOriGPairBCB = obj.ScafRouting; NBaseOri=0;
+                for k=1: length(NOriGPairBCB)
+                    BaseRoutOri = interpolateBase_ThreeCol( NOriGPairBCB{k} );
+                    nn= size(BaseRoutOri,1) ;
+                    NBaseOri=NBaseOri+nn ;
+                end
+                
+                fprintf('Checking sacffold and staple mapping. \n')
+                StapToScaf_Corr= zeros( length(obj.StapList3) ,  length(obj.ScafRouting)  ) ;
+                StapToScaf_Corr_NBase= zeros( length(obj.StapList3) ,  length(obj.ScafRouting)  ) ;
+                
+                %-------collect and stack scaffold for efficiency
+                AllScafBaseByBase =  zeros(NBaseOri , 4   ) ; cc=1;  % without considering skip [B C B scaf]
+                for scafj= 1:  length(obj.ScafRouting)
+                    BaseRout2 = interpolateBase_ThreeCol( obj.ScafRouting{scafj} );
+                    AllScafBaseByBase(cc:cc+size(BaseRout2,1)-1 ,:) =[BaseRout2, scafj*ones(size(BaseRout2,1),1)] ; cc=cc+size(BaseRout2,1) ;
+                end
+                
+                for stapi=  1:  length(obj.StapList3)
+                    C5rep_Stap = obj.StapList3{stapi} ;
+                    %        CornerC4 =ScafCornerC4{k} ;
+                    CornerBCB= [zeros(size(C5rep_Stap,1),1) ,C5rep_Stap ];
+                    [~,b]=ismember(C5rep_Stap(:,1),obj.RelateTable(:,5) ) ;
+                    CornerBCB(:,1:2) = obj.RelateTable(b,1:2) ;
+                    % NewScaf =CornerBCB;
+                    StapBaseBCB =  interpolateBase_ThreeCol( CornerBCB );
+                    [~,BB] = ismember(StapBaseBCB , AllScafBaseByBase(:,1:3) ,'rows'   ) ; BB=setdiff(BB,0);
+                    BelongToBundles = unique( AllScafBaseByBase(BB,4) )' ;
+                    StapToScaf_Corr(stapi, BelongToBundles) =1;
+                    
+                    [aa,bb]=hist(AllScafBaseByBase(BB,4),unique(AllScafBaseByBase(BB,4))) ;
+                    StapToScaf_Corr_NBase(stapi, bb) =aa ;
+                end
+                StapToScaf_Corr_NBase=StapToScaf_Corr_NBase(1: length(obj.StapList3), 1:length(obj.ScafRouting)  ) ;
+                [u,v] = find(StapToScaf_Corr_NBase~=0) ;
+                QQ= StapToScaf_Corr_NBase~=0 ;
+                Q=sum(QQ,2) ; %Q(randi(size(Q,1) ,5,1))=3 
+                
+                 CircularH = InspectCircularMapping(obj ) ;
+                fH2 = figure(562) ;clf  ;fH2.WindowButtonDownFcn=''; fH2.WindowButtonMotionFcn='';
+                fH2.Name='Scaffold and Staple mapping (Without considering skip in SQ bundles' ; set(fH2,'NumberTitle','off');
+
+              
+                subplot(1,4,1) ;
+                ax=gca; CCorder =ax.ColorOrder;
+                for k = 1: length(Q)
+                    v = [0 0; 1 0; 1 1; 0 1]+ [zeros(4,1), (k-1)*ones(4,1)]  ;
+                    f = [1 2 3 4];                   
+                    pH= patch('Faces',f,'Vertices',v,'FaceColor',CCorder( mod( Q(k)-1,size(CCorder,1))+1 ,:) ) ;
+                    pH.EdgeColor=0.1*ones(1,3) ; pH.LineWidth=0.1 ;
+                    CircularH{k}.Color =pH.FaceColor ;
+                end
+                axis ij ;
+                %                 fffH =figure(561) ; clf; %h = image(u,v,StapToScaf_Corr_NBase(u,v)) ;
+                subplot(1,4,[3 4]) ;
+                h = image(StapToScaf_Corr_NBase) ;
+                
+                
+                axx =gca; colormap copper;
+                %                 h.ButtonDownFcn=@(src,evn)showMapping(src,evn,StapToScaf_Corr_NBase);
+%                 fH2.WindowButtonDownFcn  =@(src,evn)showMapping(src,evn,StapToScaf_Corr_NBase,axx,ax ,Q ,CircularH , varargin);
+                                fH2.WindowButtonMotionFcn =@(src,evn)showMapping(src,evn,StapToScaf_Corr_NBase,axx,ax ,Q ,CircularH , varargin  );
+                colorbar;
+                xlabel('Scaffold index');     ylabel('Staple index');
+                ax.YLim=axx.YLim; ax.XTick=[]; axes(ax); ax.Color='none';
+                color = get(fH2,'Color');
+                set(gca,'XColor',[0 0 0],'YColor',[0 0 0 ],'TickDir','out')
+                axes(axx);  axx.FontSize =14;
+                UU_Corr = unique(StapToScaf_Corr,'rows') ;
+                %        RowsSingle = find(sum(UU_Corr,2)==1 ) ;
+                for k=1: size(UU_Corr, 1)
+                    [QQ,~] = ismember(StapToScaf_Corr,UU_Corr(k,:),'rows'   ) ;
+                    fprintf( ' Scaf mapping case [%s] has %i staples.   \n',  num2str(UU_Corr(k,:)),sum(QQ) ) ;
+                end
+                fprintf( '\n' ) ;
+                
+                CheckStapleOverMultipleScaf = sum(UU_Corr, 2) ;
+                for k= 1 : max(CheckStapleOverMultipleScaf)
+                    casesMultiScaf  = CheckStapleOverMultipleScaf==k ;
+                    [QQ2,~] = ismember(StapToScaf_Corr,UU_Corr(casesMultiScaf,:),'rows'   ) ;
+                    fprintf( ' Staple across (%s) scaffolds =  %i staples.   \n',  num2str(k),sum(QQ2) ) ;
+                end
+                fprintf( '\n' ) ; TolScaf =size(StapToScaf_Corr ,2) ;
+                for scafi = 1 : size(StapToScaf_Corr ,2)
+                    Ind_ThisScaf = StapToScaf_Corr(:,scafi)==1 ;
+                    Ind_ToOther =  StapToScaf_Corr(:,setdiff([1:TolScaf],  scafi    ))==1 ;
+                    Ind_ToOther = sum(Ind_ToOther,2)>0   ;
+                    ConnectStaple = and( Ind_ThisScaf ,Ind_ToOther) ;
+                    fprintf( 'Scaf %s has %i staples that connect to other scaffolds\n',  num2str(scafi),sum(ConnectStaple) ) ;
+                end
+                StapToScaf_Corr_NBase; colorbar;
+                fffH.UserData.StapToScaf_Corr_NBase=StapToScaf_Corr_NBase ;
+                
+                hlink =linkprop([ax axx],{ 'YLim' }); % The axes should stay aligned
+                ax.UserData.hlink=hlink ;
+                
+            end
+           
+        end  % end of InspectRouting
+        
+        
+        function  varargout= InspectCircularMapping(obj )
+            % only be trigger by InspectRouting to use to UI
+            %             ScafBase =obj.ScafAllBase   ;
+            [A,B]=cellfun(@size,obj.ScafAllBase) ;
+            StapBase =obj.StapAllBase   ;
+            %             skipBase= GetHyperB.skipBase ;
+            
+            %             sdsf=3
+            ScafForScatterAll=zeros(sum(A) ,2 ); c=1;
+            for scaf_j=1: length(obj.scafC5)
+                CellMat= obj.scafC5{scaf_j} ;
+                BaseRoute = interpolateBase( CellMat ) ;
+                ScafForScatter= setdiff(BaseRoute , obj.skipBase,'rows' ,'stable') ;  %C5 notation
+                %                 if scaf_j==1
+                %                     ScafForScatterAll=   ScafForScatter ;
+                %                 else
+                %                     ScafForScatterAll=   [ScafForScatterAll; ScafForScatter] ;
+                %                 end
+                ScafForScatterAll(c:c+size(ScafForScatter,1)-1 ,:) =ScafForScatter ; c=c+size(ScafForScatter,1) ;
             end
             
-            obj.scafC4=C4Express;
-            obj.scafC5=C5Express;
+            
+            [A2,B2]=cellfun(@size,StapBase) ;
+            MergeStapForMapping= zeros(sum(A2) ,2 ) ; c=1 ;
+            for k=1: length(StapBase)
+                MergeStapForMapping(c:c+A2(k)-1 ,:) = StapBase{k} ; c=c+A2(k) ;
+            end
+            
+            [Q,  stapToScaf ] =ismember(MergeStapForMapping ,  ScafForScatterAll ,'rows') ;
+            cumA =cumsum(A)  ;
+            FindkCir =(stapToScaf-cumA')>0 ;
+            LocationCases = sortrows(unique( FindkCir  ,'rows')  ) ;
+            [~,BB ]= ismember(FindkCir,LocationCases ,'rows' ) ;
+            
+            cumA_v2 = [0;cumA(1:end-1)] ;
+            FindPhase = stapToScaf-cumA_v2' ;
+            FindPhase(FindPhase<0) = 100*max(max(FindPhase)) ;
+            if length(A) ==1  % single scaffold case
+            BaseIndOnIndv=  FindPhase ;  
+            else
+            BaseIndOnIndv = min(FindPhase')' ;
+            end
+            Ref = A(BB) ;
+            Phase = (BaseIndOnIndv./Ref)*360 ;
+            
+            kCir_phase = zeros(length(stapToScaf) ,2 ) ;
+            kCir_phase(:,1) =BB ;
+            kCir_phase(:,2) =Phase ;
+            
+            f565=figure(565);clf ;  hold on ;
+            f565.Name='Scaffold and Staple circular mapping' ; set(f565,'NumberTitle','off');
+            
+            r1=0.25 ; theta =[0:360]-90 ;
+            for k = 1 : size(A)    % gradient scaffold
+                x=r1.*cosd(theta) + k ;
+                y=r1.*sind(theta) + 0.5*mod(k,2)  ;
+                z= zeros(size(x));col = (1:length(x))*1000;
+                surfH=surface([x;x],[y;y],[z;z],[col;col], 'facecol','no', 'edgecol','interp', 'linew',2 ,  'EdgeColor','flat');
+                text(k,0.5*mod(k,2)  ,num2str(strcat('Scaf-', ' ',num2str(k)  )) ) ;
+            end
+            axis equal ;axis off; axis ij;
+            A2 ;c= 1 ;
+            r2 =0.2 ;  plotH= cell(length(StapBase) ,1) ;
+            for stpj = 1 : length(StapBase)
+                Sub_kCir_phase = kCir_phase(c:c+A2(stpj)-1, :) ; c=c+A2(stpj) ;
+                
+                x= r2.*cosd(Sub_kCir_phase(:,2)-90) + Sub_kCir_phase(:,1) ;
+                y= r2.*sind(Sub_kCir_phase(:,2)-90) + 0.5*mod(Sub_kCir_phase(:,1),2);
+                
+                plotH{stpj}=plot(x,y) ;
+            end
+            ax= gca;
+            ax.Position = [0.02 0.02 0.96 0.96] ;
+            varargout{1}= plotH ;
+            %               dsdfs=3
+        end   % end of InspectCircularMapping
+        
+        function [BundlesIndex, TF_CrossBundles]=ShowStapleInBundles(obj)
+            Stap3 = obj.StapList3 ; % C5 Rep
+            
+            BundlesIndex=zeros(size(Stap3)) ;
+            TF_CrossBundles=zeros(size(Stap3)) ;
+            for k =1: length(Stap3)
+                C5 = Stap3{k}(:,1) ;
+                [~,b] =ismember(C5 , obj.RelateTable(:,5) )    ;
+                BInd =  obj.RelateTable(b,1) ;
+                if  length(unique(BInd)) ==1
+                    BundlesIndex(k) =unique(BInd) ;
+                    
+                else
+                    QQ= unique(BInd) ;
+                    BundlesIndex(k)= QQ(1) ; % temporiry put the first one.
+                    %                                         BundlesIndex(k)= nan ; % temporiry put nan. later can use cell to store.
+                    
+                    TF_CrossBundles(k)=1 ;
+                end
+            end
+            
+            %             sdsf=3
+        end
+        
+        function obj=ConvertScafG(obj)
+            obj.ScafGlobal=cell( length(obj.ScafRouting),1);
+            obj.scafC4=cell( length(obj.ScafRouting),1);
+            obj.scafC5=cell( length(obj.ScafRouting),1);
+            for scaf_j = 1 : length(obj.ScafRouting)
+                TT =obj.ScafRouting{scaf_j} ;
+                
+                ScafG =zeros(size(TT,1),2) ;
+                for i=1:size(TT,1)
+                    [~,ind]=ismember(TT(i,1:2),  obj.GlobalCylinderIndex,'rows');
+                    ScafG(i,1:2)=[ind,TT(i,3)];
+                end
+                %                 obj.ScafGlobal=ScafG;
+                RTable=obj.RelateTable;
+                C3Expree=ScafG;
+                C4Express=zeros(size(C3Expree));
+                C5Express=zeros(size(C3Expree));
+                for k=1:size(C5Express,1)
+                    cylC3=C3Expree(k,1);
+                    C4Express(k,1:2)= [ RTable(cylC3,4)  C3Expree(k,2)] ;
+                    C5Express(k,1:2)= [ RTable(cylC3,5)  C3Expree(k,2)] ;
+                end
+                
+                
+                obj.ScafGlobal{scaf_j}=ScafG;
+                obj.scafC4{scaf_j}=C4Express;
+                obj.scafC5{scaf_j}=C5Express;
+            end
             
         end
         
@@ -1229,6 +1669,63 @@ classdef hyperbundle <handle
             
         end  % end of function findCycleList_maxScafXover
         
+        function ScafXovers=getXoverinScaf(obj,scafR)
+            
+            AllXovers= zeros(2000,4 ) ;cc=1 ;
+            
+            Corners = sortrows(scafR{1}) ;
+            Cylinders = unique( Corners(:,1:2) ,'rows' ) ;
+            for cyli = 1 :size(Cylinders,1)
+                [aa,bb] = ismember( Corners(:,1:2),Cylinders(cyli,1:2)  ,'rows') ;
+                Base = Corners(aa,3) ;
+                
+                dBase = diff(Base) ==1 ;
+                Xovers = [Base(dBase),Base(dBase)+1] ;
+                n =size(Xovers,1) ;
+                AllXovers(cc:cc+n-1 ,:) =[ ones(n,1)*Cylinders(cyli,1:2),Xovers];
+                cc=cc+n;
+                
+            end
+            AllXovers=AllXovers(1:cc-1,:) ;
+            
+            [~,Ind1] =  ismember( AllXovers(:,1:3)  ,scafR{1},'rows') ;
+            [~,Ind2] =  ismember( AllXovers(:,[1 2 4])  ,scafR{1},'rows') ;
+            
+            AllXovers= [AllXovers,Ind1,Ind2 ] ;
+            %             AllXovers=[ AllXovers , Ind1+Ind2]
+            
+            sumV = Ind1+Ind2 ;
+            %             notCase = ismember( )
+            
+            ScafXovers = zeros( ceil(size(AllXovers,1)/2) ,12 ) ; count =1 ;
+            for srchi = 1: size(AllXovers,1)
+                if mod(AllXovers(srchi ,5) ,2)==0
+                    P1 = AllXovers(srchi , [1 2 3])  ;
+                    P2 = AllXovers(srchi , [1 2 4])  ;
+                    
+                    ind = find( AllXovers(:,5)== AllXovers(srchi ,5)+1) ;
+                    if ~isempty(ind) %&& abs(OriIndP1-OriIndP2)==1
+                        P3 = AllXovers(ind , [1 2 4])  ;
+                        P4 = AllXovers(ind , [1 2 3])  ;
+                        
+                        [~,OriIndP1 ]= ismember(P1, scafR{1},'rows') ;
+                        [~,OriIndP2 ]= ismember(P2, scafR{1},'rows') ;
+                        [~,OriIndP3 ]= ismember(P3, scafR{1},'rows') ;
+                        [~,OriIndP4 ]= ismember(P4, scafR{1},'rows') ;
+                        %                    [OriIndP1,OriIndP2,OriIndP3,OriIndP4]
+                        
+                        ScafXovers(count,: )=[P1,P2,P3,P4] ; count=count+1;
+                    end
+                end
+            end
+            ScafXovers=ScafXovers(1:count-1, :) ;
+            
+            
+            
+            %             sdf=4
+        end
+        
+        
         function NewNOriGPairBCB=AddBridgeXover2TwoCycle(obj,NOriGPairBCB,XoverBridgeTwoCycle,RemoveXovers)
             NewNOriGPairBCB=NOriGPairBCB ;
             InvolveCycle = [];
@@ -1292,11 +1789,141 @@ classdef hyperbundle <handle
             NewNOriGPairBCB(InvolveCycle(2))=[];
         end
         
-        
+        function Output=IntegrateScaffold(obj ,NOriGPairBCB)
+            %  mainly modify from findCycleList, Use for multi-scaffold maximizing the numbers of tangle staples.
+            NOriGPairBCBInitial =NOriGPairBCB ;
+            Adj2=zeros(length(NOriGPairBCB) ,length(NOriGPairBCB) );
+            for icycle=1:length(NOriGPairBCB)   % version 2 to find AdjM of graph
+                for jcycle=icycle+1:length(NOriGPairBCB)
+                    
+                    %                     XX=Given2CylceFindXoverList(obj,NOriGPairBCB{icycle},NOriGPairBCB{jcycle}) ;
+                    %                     YY=Given2CylceFindXoverList(obj,NOriGPairBCB{jcycle},NOriGPairBCB{icycle}) ;
+                    XX=Given2CylceFindXoverList(obj,NOriGPairBCB{icycle},NOriGPairBCB{jcycle},[]  ) ;
+                    
+                    if ~isempty(XX) %&& ~isempty(YY)
+                        Adj2( icycle,jcycle)=1;
+                        Adj2( jcycle,icycle)=1;
+                    end
+                end
+            end
+            gAdjM2=graph(Adj2);
+            [T2,predM2] = minspantree(gAdjM2,'Type','forest' )  ;
+            %            figure(235); hh= plot(gAdjM2) ;highlight(hh,T2,'EdgeColor','r','LineWidth',1.5) ;
+            cc=1 ;
+            CombiningXover=zeros( 2*(length(predM2)-sum(predM2==0)),6);
+            for k=1: length(predM2)
+                if predM2(k) ~=0
+                    %                         [k,predM(k)];
+                    OneXover=obj.Given2CylceFindXoverList(NOriGPairBCB{k},NOriGPairBCB{predM2(k)},[] ) ;
+                    if isempty(OneXover)
+                        OneXover=obj.Given2CylceFindXoverList(NOriGPairBCB{predM2(k)},NOriGPairBCB{k}) ;
+                    end
+                    CombiningXover(cc:cc+1,:)= OneXover;
+                    cc=cc+2 ;
+                end
+            end
+            
+            for kk=1:size(CombiningXover,1)/2
+                AppXover=CombiningXover(2*kk-1:2*kk,:);
+                [NOriGPairBCB,UnUsedX, CycleInvolved] = obj.AddXover22cycles(NOriGPairBCB,AppXover);
+            end
+            SaveNOriGPairBCB=  NOriGPairBCB ;
+            
+            tol =6 ;
+            [ ~,whichCyl ] = CheckScafRXover(NOriGPairBCB, tol  ,[]) ;  % or add more bundle
+            [~,iy1]=ismember( whichCyl, CombiningXover(:,1:3),'rows' ) ;
+            [~,iy2]=ismember( whichCyl, CombiningXover(:,4:6),'rows' ) ;
+            iyy= union(iy1(iy1~=0) ,iy2(iy2~=0) ) ;
+            iyyEven= zeros( length(iyy) ,2) ;
+            for ci= 1:length(iyy)
+                if mod(iyy(ci),2)==1
+                    iyyEven(ci,:) = [iyy(ci) ,iyy(ci)+1];
+                else
+                    iyyEven(ci,:) = [iyy(ci)-1 ,iyy(ci)];
+                end
+            end
+            iyyEven= unique(iyyEven,'rows') ;
+            
+            RemoveXovers =CombiningXover(iyyEven' ,:) ;
+            
+            
+            %                RemoveXovers =CombiningXover(iyyEven' ,:) ;
+            
+            nNotGood =size(whichCyl ,1)  ;   % if initial solution is too bad, just back to outer loop to get a better one
+            if  nNotGood< 500
+                %                     fprintf( ' Seems to be able to find a good scaf \n')
+                for tworound= 1:2
+                    if tworound==1
+                        SaveAppliedXoverInFirstRound = zeros(200, 6) ; kx =1;
+                    else
+                        fprintf('start second round \n') ;
+                        if nNotGood==0 || isempty(RemoveXovers) ; break;end         % in case that first round is good
+                        
+                        RemoveXovers= SaveAppliedXoverInFirstRound(1:kx-1 , :) ; % second round try to remove newly added Xovers
+                        IndRemain=   find( or( ismember( RemoveXovers(:,1:3), whichCyl2,'rows'),ismember( RemoveXovers(:,4:6), whichCyl2,'rows')) ) ;  % only reserve xover has problem
+                        IndRemain= union(IndRemain(mod(IndRemain,2)==1), IndRemain(mod(IndRemain,2)==0)-1 )  ; IndRemain=union(IndRemain, IndRemain+1) ;
+                        RemoveXovers=RemoveXovers( IndRemain,:) ;
+                        %                             RemoveXovers
+                    end
+                    
+                    for riXover=  1:2:size(RemoveXovers,1)
+                        SS=NOriGPairBCB ;
+                        Xover = RemoveXovers(riXover:riXover+1 ,:) ;
+                        TwoCycles=    removeScafXover_general(obj,NOriGPairBCB,Xover)   ;
+                        %                               removeScafXover_general(GetHyperB,NOriGPairBCB,Xover)
+                        [~, XoverList]=obj.Given2CylceFindXoverList(TwoCycles{1},TwoCycles{2},  []) ; % avoid in while loop. Query one time for a list, 09/11/2019
+                        
+                        if isempty(XoverList) || length(TwoCycles)>2
+                            EEemptyHappened =1 ;
+                            continue;
+                        end
+                        cw= 1;
+                        while 1
+                            OneXover = XoverList(  randi(size(XoverList,1),1) , :)  ;
+                            OneXover= [OneXover(1,1:6) ;OneXover(1,7:12) ];
+                            [NOriGPairBCBOut,UnUsedX, CycleInvolved] = obj.AddXover22cycles(TwoCycles,OneXover)     ;
+                            [ ~,whichCyl2 ] = CheckScafRXover(NOriGPairBCBOut{1}, tol,[]) ;
+                            cw=cw+1;
+                            if cw>30
+                                whichCyl2;
+%                                 fprintf('reach max loop\n');
+                                break;   %
+                            end
+                            
+                            if size(whichCyl2,1) < nNotGood
+                                nNotGood= size(whichCyl2,1) ;
+                                NOriGPairBCB= NOriGPairBCBOut;
+                                if length(NOriGPairBCB) ==2
+                                    sdsf=3
+                                end
+                                
+                                SaveAppliedXoverInFirstRound(kx:kx+1,: )= OneXover ; kx=kx+2 ;
+                                break
+                            end
+                            if nNotGood==0
+                                break
+                            end
+                        end
+%                         fprintf('nCornerOnBadXover = %i\n',   size(whichCyl2,1))
+                    end
+                end  % for tworound= 1:2
+            end
+            [ Goodcc,whichCylcc ] = CheckScafRXover(NOriGPairBCB{1}, tol,[] ) ; % whichCylcc
+            
+            Output =NOriGPairBCBOut ;
+            if length(Output)==2
+                sdfsf=3;
+            end
+            
+            %            obj.ScafRouting=NOriGPairBCB ;
+        end
         
         
         function [obj,Goodcc]=findCycleList(obj,~,mainHandles,type)
             
+            %             profile on
+            
+            obj.GetOrgBlockAdj ;
             %             figure(6);clf;
             %             subplot(2,3,1);axCell=cell(6,1);
             %             for k=1:6
@@ -1348,71 +1975,84 @@ classdef hyperbundle <handle
             
             %             obj.drawBCBdata(OriGPairBCB,ax2);
             ConnectList=obj.ForcedConnectList;
+            if ~isempty(obj.SaveInternalXovers)  %-------Muli-Scaf, isolate regions
+                AddInterXovers = obj.SaveInternalXovers ;
+                AddInterXovers2 = zeros(size(AddInterXovers,1)*2  ,size(AddInterXovers,2)/2) ;
+                for k = 1:size(AddInterXovers,1)
+                    AddInterXovers2(2*k-1,:) =AddInterXovers(k, 1:6) ;
+                    AddInterXovers2(2*k,:) =AddInterXovers(k, 7:12) ;
+                end
+                AddInterXovers2= [AddInterXovers2(:,4:6) ,AddInterXovers2(:,1:3)] ;
+                
+                ConnectList=[ConnectList;  AddInterXovers2] ;
+            end
             
             %----------------------
             ss_json=findall(gcf,'Tag','ss_json') ;
             sH=findobj(ss_json,'Tag','sH') ;
             if ~isempty(sH)
                 if isfield(sH.UserData,'ExtraForcedScafXover')  % && size(obj.ScafRouting ,1)==size(sH.Parent.UserData.PlottedScafR ,1 )
-                    if sum(sum(obj.ScafRouting==sH.Parent.UserData.PlottedScafR) )== numel(sH.Parent.UserData.PlottedScafR)  
-                        % check the routing showing in cadnano tab is the
-                        % current one.
-                    nExtra = size(sH.UserData.ExtraForcedScafXover,1)/2 ;
-                    str=strcat('ExtraForcedXover (',num2str(nExtra),')' ) ;
-                    answerExtra = questdlg('Found Extra Overs in cadnano tab. Do you want to use it ?',str, ...
-                        'Yes','No' ,'Yes');
-                    if strcmp(answerExtra,'Yes')
-%                         ConnectList= [ConnectList ; sH.UserData.ExtraForcedScafXover] ;
-%                         ConnectList
-                        ExtraXover =sH.UserData.ExtraForcedScafXover  
-                        OriginalScafRouting  = {obj.ScafRouting} ;
-                        
-                        for AddXoveri=1:size(ExtraXover,1)/2  % add extra xover from cadnano tab
-                            Xover=ExtraXover(2*AddXoveri-1:2*AddXoveri,:);
-                            [OriginalScafRouting,UnUsedX, CycleInvolved] =obj.AddXover22cycles(OriginalScafRouting,Xover);
-                            if ~isempty(UnUsedX) && length(CycleInvolved)==1
-                                DD=OriginalScafRouting;
-                                OriginalScafRouting=obj.AddXover2OneCycle(OriginalScafRouting,Xover);
-                            end
-                        end    
-                        Adj2=zeros(length(OriginalScafRouting) ,length(OriginalScafRouting) );
-                        for icycle=1:length(OriginalScafRouting)   % version 2 to find AdjM of graph
-                            for jcycle=icycle+1:length(OriginalScafRouting)
-                                XX=Given2CylceFindXoverList(obj,OriginalScafRouting{icycle},OriginalScafRouting{jcycle},AssignScafXovers, ExtraXover  ) ;                               
-                                if ~isempty(XX) %&& ~isempty(YY)
-                                    Adj2( icycle,jcycle)=1;
-                                    Adj2( jcycle,icycle)=1;
+                    if size(obj.ScafRouting{1} ,1)==size(sH.Parent.UserData.PlottedScafR{1} ,1)
+                        if sum(sum(obj.ScafRouting{1}==sH.Parent.UserData.PlottedScafR{1}) )== numel(sH.Parent.UserData.PlottedScafR{1})
+                            % check the routing showing in cadnano tab is the
+                            % current one.
+                            nExtra = size(sH.UserData.ExtraForcedScafXover,1)/2 ;
+                            str=strcat('ExtraForcedXover (',num2str(nExtra),')' ) ;
+                            answerExtra = questdlg('Found Extra Overs in cadnano tab. Do you want to use it ?',str, ...
+                                'Yes','No' ,'Yes');
+                            if strcmp(answerExtra,'Yes')
+                                %                         ConnectList= [ConnectList ; sH.UserData.ExtraForcedScafXover] ;
+                                %                         ConnectList
+                                ExtraXover =sH.UserData.ExtraForcedScafXover;
+                                OriginalScafRouting  = obj.ScafRouting ;
+                                
+                                for AddXoveri=1:size(ExtraXover,1)/2  % add extra xover from cadnano tab
+                                    Xover=ExtraXover(2*AddXoveri-1:2*AddXoveri,:);
+                                    [OriginalScafRouting,UnUsedX, CycleInvolved] =obj.AddXover22cycles(OriginalScafRouting,Xover);
+                                    if ~isempty(UnUsedX) && length(CycleInvolved)==1
+                                        DD=OriginalScafRouting;
+                                        OriginalScafRouting=obj.AddXover2OneCycle(OriginalScafRouting,Xover);
+                                    end
                                 end
+                                Adj2=zeros(length(OriginalScafRouting) ,length(OriginalScafRouting) );
+                                for icycle=1:length(OriginalScafRouting)   % version 2 to find AdjM of graph
+                                    for jcycle=icycle+1:length(OriginalScafRouting)
+                                        XX=Given2CylceFindXoverList(obj,OriginalScafRouting{icycle},OriginalScafRouting{jcycle},AssignScafXovers, ExtraXover  ) ;
+                                        if ~isempty(XX) %&& ~isempty(YY)
+                                            Adj2( icycle,jcycle)=1;
+                                            Adj2( jcycle,icycle)=1;
+                                        end
+                                    end
+                                end
+                                gAdjM2=graph(Adj2);
+                                [T,predM] = minspantree(gAdjM2,'Method', 'sparse');  % old way, variety is low
+                                if  sum(isnan(predM))>0
+                                    % some loops can't not integrate after adding forced connection. May be due to too short for bundles or limited scaf xover.
+                                    figure; p=plot(gAdjM2) ;  title(' cycle graph, some of them are isolated  ')
+                                    fprintf('some loops can''t not integrate after adding forced connection \n')
+                                    error('Error. check forced connection, lengths of bundle, or limited scaf xover ')
+                                end
+                                CombiningXover=zeros( 2*(length(predM)-1),6);
+                                for k=2: length(predM)
+                                    [k,predM(k)];
+                                    OneXover=obj.Given2CylceFindXoverList(OriginalScafRouting{k},OriginalScafRouting{predM(k)},[] ) ;
+                                    if isempty(OneXover)
+                                        OneXover=obj.Given2CylceFindXoverList(OriginalScafRouting{predM(k)},OriginalScafRouting{k}) ;
+                                    end
+                                    CombiningXover(2*k-3:2*k-2,:)= OneXover;
+                                end
+                                for kk=1:size(CombiningXover,1)/2
+                                    AppXover=CombiningXover(2*kk-1:2*kk,:);
+                                    [OriginalScafRouting,UnUsedX, CycleInvolved] = obj.AddXover22cycles(OriginalScafRouting,AppXover);
+                                    
+                                end
+                                obj.ScafRouting= OriginalScafRouting ;
+                                [ Goodcc,whichCylcc ] = CheckScafRXover(OriginalScafRouting{1}, tol,obj.ScafOption.BundleNoScafLoop ) ;
+                                %                         sdsdf=3
+                                
+                                return ;
                             end
                         end
-                        gAdjM2=graph(Adj2);
-                        [T,predM] = minspantree(gAdjM2,'Method', 'sparse');  % old way, variety is low
-                        if  sum(isnan(predM))>0
-                            % some loops can't not integrate after adding forced connection. May be due to too short for bundles or limited scaf xover.
-                            figure; p=plot(gAdjM2) ;  title(' cycle graph, some of them are isolated  ')
-                            fprintf('some loops can''t not integrate after adding forced connection \n')
-                            error('Error. check forced connection, lengths of bundle, or limited scaf xover ')
-                        end
-                        CombiningXover=zeros( 2*(length(predM)-1),6);
-                        for k=2: length(predM)
-                            [k,predM(k)];
-                            OneXover=obj.Given2CylceFindXoverList(OriginalScafRouting{k},OriginalScafRouting{predM(k)},[] ) ;
-                            if isempty(OneXover)
-                                OneXover=obj.Given2CylceFindXoverList(OriginalScafRouting{predM(k)},OriginalScafRouting{k}) ;
-                            end
-                            CombiningXover(2*k-3:2*k-2,:)= OneXover;
-                        end    
-                        for kk=1:size(CombiningXover,1)/2
-                            AppXover=CombiningXover(2*kk-1:2*kk,:);
-                            [OriginalScafRouting,UnUsedX, CycleInvolved] = obj.AddXover22cycles(OriginalScafRouting,AppXover);
-   
-                        end
-                        obj.ScafRouting= OriginalScafRouting{1} ;
-                       [ Goodcc,whichCylcc ] = CheckScafRXover(OriginalScafRouting{1}, tol,obj.ScafOption.BundleNoScafLoop ) ;
-%                         sdsdf=3
-                        
-                        return ;
-                    end
                     end
                 end
             end
@@ -1448,10 +2088,10 @@ classdef hyperbundle <handle
                 end
                 
                 %                 obj.drawBCBdata(NOriGPairBCB,ax2);
-            end           
+            end
             %               obj.drawBCBdata(NOriGPairBCB,axCell{2});
-            %             obj.drawBCBdata(NOriGPairBCB,ax2)            
-            %                          obj.drawBCBdata(NOriGPairBCB)            
+            %             obj.drawBCBdata(NOriGPairBCB,ax2)
+            %                          obj.drawBCBdata(NOriGPairBCB)
             %                          return%--------------------------
             
             Adj2=zeros(length(NOriGPairBCB) ,length(NOriGPairBCB) );
@@ -1471,12 +2111,51 @@ classdef hyperbundle <handle
             gAdjM2=graph(Adj2);
             
             varietyoption=1 ;
-            switch varietyoption
-                case 1
-                    [T,predM] = minspantree(gAdjM2,'Method', 'sparse');  % old way, variety is low
-                case 2
-                    [T,predM] = minspantree(gAdjM2,'Method', 'sparse', 'Root' , randi(length(NOriGPairBCB) ));
+            %             switch varietyoption
+            %                 case 1
+            %                     [T,predM] = minspantree(gAdjM2,'Method', 'sparse');  % old way, variety is low
+            %                 case 2
+            %                     [T,predM] = minspantree(gAdjM2,'Method', 'sparse', 'Root' , randi(length(NOriGPairBCB) ));
+            %             end
+            
+            %-------------- multiple scaffolds, 08/08/2019
+            %             if  sum(isnan(predM))>0
+            [T2,predM2] = minspantree(gAdjM2,'Type','forest' ) ; predM2
+            
+            figure(235); hh= plot(gAdjM2) ;highlight(hh,T2,'EdgeColor','r','LineWidth',1.5) ;
+            
+            cc=1 ;
+            CombiningXover=zeros( 2*(length(predM2)-sum(predM2==0)),6);
+            for k=1: length(predM2)
+                
+                if predM2(k) ~=0
+                    %                         [k,predM(k)];
+                    OneXover=obj.Given2CylceFindXoverList(NOriGPairBCB{k},NOriGPairBCB{predM2(k)},[] ) ;
+                    if isempty(OneXover)
+                        OneXover=obj.Given2CylceFindXoverList(NOriGPairBCB{predM2(k)},NOriGPairBCB{k}) ;
+                    end
+                    CombiningXover(cc:cc+1,:)= OneXover;
+                    cc=cc+2 ;
+                end
             end
+            
+            for kk=1:size(CombiningXover,1)/2
+                AppXover=CombiningXover(2*kk-1:2*kk,:);
+                [NOriGPairBCB,UnUsedX, CycleInvolved] = obj.AddXover22cycles(NOriGPairBCB,AppXover);
+            end
+            obj.ScafRouting=NOriGPairBCB ;
+            
+%             figure(234);clf; obj.drawBCBdata(NOriGPairBCB,gca) ;
+            %                 dfgdg=4
+            %                 figure; obj.drawBCBdata(NOriGPairBCB,gca) ;
+            
+            %                 sdfsf=3
+            %                 figure(556) ;clf ;hold on ;
+            %                 obj.plotScafR_cylindermodelMulti ;
+            %                 return
+            %             end
+            
+            
             
             %             axes(axCell{4});
             %               p=plot(gAdjM2) ;     highlight(p,T,'EdgeColor','r','LineWidth',1.5)
@@ -1486,66 +2165,57 @@ classdef hyperbundle <handle
             
             %             fprintf('spantree =  %s \n', num2str(predM) ) ;
             
-            if  sum(isnan(predM))>0
-                % some loops can't not integrate after adding forced connection. May be due to too short for bundles or limited scaf xover.
-                figure; p=plot(gAdjM2) ;  title(' cycle graph, some of them are isolated  ')
-                fprintf('some loops can''t not integrate after adding forced connection \n')
-                error('Error. check forced connection, lengths of bundle, or limited scaf xover ')
-            end
+            %             if  sum(isnan(predM))>0
+            %                 % some loops can't not integrate after adding forced connection. May be due to too short for bundles or limited scaf xover.
+            %                 figure; p=plot(gAdjM2) ;  title(' cycle graph, some of them are isolated  ')
+            %                 fprintf('some loops can''t not integrate after adding forced connection \n')
+            %                 error('Error. check forced connection, lengths of bundle, or limited scaf xover ')
+            %             end
             
             
-            switch varietyoption
-                case 1
-                    CombiningXover=zeros( 2*(length(predM)-1),6);
-                    for k=2: length(predM)
-                        [k,predM(k)];
-                        OneXover=obj.Given2CylceFindXoverList(NOriGPairBCB{k},NOriGPairBCB{predM(k)},[] ) ;
-                        if isempty(OneXover)
-                            OneXover=obj.Given2CylceFindXoverList(NOriGPairBCB{predM(k)},NOriGPairBCB{k}) ;
-                        end
-                        CombiningXover(2*k-3:2*k-2,:)= OneXover;
-                    end
-                    
-                case 2
-                    AssignScafXovers = [] ;  % for breakable bundle feature, hasn't integrated
-                    CombiningXover=zeros( 2*(length(predM)-1),6); cK=2;   %Bund2Xover=1;
-                    for k=1: length(predM)
-                        %               [k,predM(k)];
-                        if predM(k)~=0
-                            CurrAllScafxover=[ AssignScafXovers;CombiningXover];
-                            nw=1;
-                            while 1
-                                OneXover=obj.Given2CylceFindXoverList(NOriGPairBCB{k},NOriGPairBCB{predM(k)} , CurrAllScafxover,ConnectList ) ;
-                                if isempty(OneXover)
-                                    OneXover=obj.Given2CylceFindXoverList(NOriGPairBCB{predM(k)},NOriGPairBCB{k},[]   ) ;
-                                end
-                                Range=[131,134];
-                                if OneXover(1,1)~=2 || nw>2
-                                    break
-                                    %                                 elseif OneXover(1,1)==2 &&  (OneXover(1,3)>Range(2) || OneXover(1,3)<Range(1))
-                                    %                                     Bund2Xover=Bund2Xover+1 ;
-                                    %                                     break
-                                end
-                                nw=nw+1;
-                            end
-                            CombiningXover(2*cK-3:2*cK-2,:)= OneXover;
-                            cK=cK+1;
-                        end
-                    end
-            end
+            %             switch varietyoption
+            %                 case 1
+            %                     CombiningXover=zeros( 2*(length(predM)-1),6);
+            %                     for k=2: length(predM)
+            %                         [k,predM(k)];
+            %                         OneXover=obj.Given2CylceFindXoverList(NOriGPairBCB{k},NOriGPairBCB{predM(k)},[] ) ;
+            %                         if isempty(OneXover)
+            %                             OneXover=obj.Given2CylceFindXoverList(NOriGPairBCB{predM(k)},NOriGPairBCB{k}) ;
+            %                         end
+            %                         CombiningXover(2*k-3:2*k-2,:)= OneXover;
+            %                     end
+            %                 case 2
+            %                     AssignScafXovers = [] ;  % for breakable bundle feature, hasn't integrated
+            %                     CombiningXover=zeros( 2*(length(predM)-1),6); cK=2;   %Bund2Xover=1;
+            %                     for k=1: length(predM)
+            %                         if predM(k)~=0
+            %                             CurrAllScafxover=[ AssignScafXovers;CombiningXover];
+            %                             nw=1;
+            %                             while 1
+            %                                 OneXover=obj.Given2CylceFindXoverList(NOriGPairBCB{k},NOriGPairBCB{predM(k)} , CurrAllScafxover,ConnectList ) ;
+            %                                 if isempty(OneXover)
+            %                                     OneXover=obj.Given2CylceFindXoverList(NOriGPairBCB{predM(k)},NOriGPairBCB{k},[]   ) ;
+            %                                 end
+            %                                 Range=[131,134];
+            %                                 if OneXover(1,1)~=2 || nw>2
+            %                                     break
+            %                                 end
+            %                                 nw=nw+1;
+            %                             end
+            %                             CombiningXover(2*cK-3:2*cK-2,:)= OneXover;
+            %                             cK=cK+1;
+            %                         end
+            %                     end
+            %             end
             
             
             
             
-            for kk=1:size(CombiningXover,1)/2
-                AppXover=CombiningXover(2*kk-1:2*kk,:);
-                [NOriGPairBCB,UnUsedX, CycleInvolved] = obj.AddXover22cycles(NOriGPairBCB,AppXover);
-                %              obj.drawBCBdata(NOriGPairBCB);
-                %                 if ~isempty(UnUsedX)
-                %                     %                     NOriGPairBCB=obj.AddXover2OneCycle(NOriGPairBCB,AppXover);
-                %                     sdfsf=324;
-                %                 end
-            end
+            %             for kk=1:size(CombiningXover,1)/2
+            %                 AppXover=CombiningXover(2*kk-1:2*kk,:);
+            %                 [NOriGPairBCB,UnUsedX, CycleInvolved] = obj.AddXover22cycles(NOriGPairBCB,AppXover);
+            %                 %              obj.drawBCBdata(NOriGPairBCB);
+            %             end
             
             %           obj.drawBCBdata(NOriGPairBCB,ax2);
             %             tol=10;
@@ -1554,10 +2224,9 @@ classdef hyperbundle <handle
             Goodcc=0;
             %               obj.drawBCBdata(NOriGPairBCB,axCell{5});
             
-            if length(NOriGPairBCB)==1
-                scafR=NOriGPairBCB{1};
-                %                 scafR(1:5,:)
-                
+            %             if length(NOriGPairBCB)==1
+            for scaf_j = 1 : length(NOriGPairBCB)
+                scafR=NOriGPairBCB{scaf_j};
                 
                 Scaf0=scafR;
                 % fixing overrouting at ends------
@@ -1578,7 +2247,8 @@ classdef hyperbundle <handle
                 
                 [isBottom,~]=  ismember(ResortCL,EndsOnBottom,'rows');
                 TargetNodeofBottom=ResortCL(isBottom,:);
-                [~,indComp1]= ismember(TargetNodeofBottom,scafR,'rows');
+                [TFindComp1,indComp1]= ismember(TargetNodeofBottom,scafR,'rows');
+                indComp1=indComp1(TFindComp1) ;
                 
                 [isTop2,~]= ismember(scafR,EndsOnTop,'rows');
                 [isBottom2,~]= ismember(scafR,EndsOnBottom,'rows');
@@ -1592,8 +2262,8 @@ classdef hyperbundle <handle
                 %-- - - - - -
                 [isTop,~]=  ismember(ResortCL,EndsOnTop,'rows')  ;
                 TargetNodeofTop=ResortCL(isTop,:);
-                [~,indComp2]= ismember(TargetNodeofTop,scafR,'rows');
-                
+                [TFindComp2,indComp2]= ismember(TargetNodeofTop,scafR,'rows');
+                indComp2=indComp2(TFindComp2) ;
                 [~,Bx] = ismember(scafR(indComp2,1:3),obj.ssOption.individual(:,1:3) ,'rows');
                 %                CompV2= obj.ssOption.individual(Bx,4);
                 if isempty(obj.ssOption.individual)
@@ -1613,28 +2283,18 @@ classdef hyperbundle <handle
                 scafR(isBottom2A,3)= scafR(isBottom2A,3)+obj.OverRoute-obj.ssOption.OverRoute+obj.ssOption.BundleShiftTwoSide( scafR(isBottom2A,1),1)   ;   %compensate
                 % bug: Sep 20, flip two sides' shifting
                 
-                
-                
                 scafR(indComp2,3)= scafR(indComp2,3)+CompV2   ;   %compensate  isTop forceconnection
                 scafR(indComp1,3)= scafR(indComp1,3)-CompV1 ;   %compensate  isBottom belong forceconnection
                 %              scafR(isTop2A,3)= scafR(isTop2A,3)+obj.ssOption.OverRoute   ;   %compensate
                 %              scafR(isBottom2A,3)= scafR(isBottom2A,3)-obj.ssOption.OverRoute   ;   %compensate
-                
                 %--------------
                 scafR2= scafR;
-                
-                searchDebugBunCyl = [4,2];
                 for updateSS=1:length(obj.ssOption.ForceConnUpdate)
                     %               PM2A=  obj.ssOption.ForceConnUpdate{updateSS}.BCBPM2(3)-obj.ssOption.ForceConnUpdate{updateSS}.BCB0(3);
                     %               PM2B=  obj.ssOption.ForceConnUpdate{updateSS}.BCBPM2(6)-obj.ssOption.ForceConnUpdate{updateSS}.BCB0(6);
                     %               PM2A=0;PM2B=0;
                     OldsPM2= obj.ssOption.ForceConnUpdate{updateSS}.BCBPM2 ;
                     NewEnds=obj.ssOption.ForceConnUpdate{updateSS}.BCBCur ;
-                    
-                    %               if  sum(NewEnds(1:2)==searchDebugBunCyl)== 2 || sum(NewEnds(4:5)==searchDebugBunCyl)== 2
-                    %                   sdfsf=3
-                    %               end
-                    %
                     
                     [~,iiid1]= ismember(Scaf0,OldsPM2(1:3),'rows') ; fd1=find(iiid1);
                     scafR2( fd1,:)=NewEnds(1:3)+scafR(fd1,:)-Scaf0(fd1,:)   ;
@@ -1651,7 +2311,6 @@ classdef hyperbundle <handle
                 % hard code
                 %                 fprintf('sticky end option, hard code in obj.findCycleList \n' )
                 if strcmp(obj.ScafOption.prevStack,'scafloop')
-                    %                     TargetPolyBundles= [9,10 , 11];
                     TargetPolyBundles= obj.ScafOption.PolyBundle ;
                     for Vedge = 2:2 :size(scafR2 ,1)-1
                         %                     [Vedge,size(scafR2,1)]
@@ -1684,9 +2343,8 @@ classdef hyperbundle <handle
                             end
                         end
                     end
-                    
                     %-----------------
-                    % hard code
+                    %
                     %                 BundleNoScafLoop = 10:17 ;    fprintf('BundleNoScafLoop = %s \n', num2str(BundleNoScafLoop)  ) ;
                     BundleNoScafLoop=obj.ScafOption.BundleNoScafLoop ;
                     for k =1:size(scafR2,1)
@@ -1739,9 +2397,6 @@ classdef hyperbundle <handle
                                     QQ(QQ<0)=200;
                                     QQ=abs(QQ) ;
                                 end
-                                
-                                %                                 QQ = abs(XOinZ-MM(1,3));
-                                
                                 choose= XOinZ(QQ==min(QQ)) ;
                                 if MM(1,3)<Bundle.Zbase1(MM(1,2))
                                     choose=choose+1;
@@ -1763,47 +2418,20 @@ classdef hyperbundle <handle
                     end
                 end
                 
-                
-                
                 %circular shift to longest edge
                 edgwsL = abs(scafR2(2:2:end ,3) -scafR2(1:2:end ,3));
-                Movestep=  find(edgwsL==max(edgwsL)) ;
-                Movestep=Movestep(1) ;
+                Movestep=  find(edgwsL==max(edgwsL)) ;    Movestep=Movestep(1) ;
                 scafR2=  circshift(scafR2,-2*Movestep+2) ;
-                
                 %                  [scafR,scafR2] ;
                 %-----
-                Vec=round((scafR2(2,:)-scafR2(1,:))/2);
-                Veci=Vec/norm(Vec);
-                
+                Vec=round((scafR2(2,:)-scafR2(1,:))/2);        Veci=Vec/norm(Vec);
                 
                 NewscafR2=[ scafR2(1,:);scafR2(1,:)+Vec;scafR2(1,:)+Vec+Veci; scafR2(2:end,:)];
                 NewscafR2=circshift(NewscafR2,-2);
-                
-                %            NewscafR3=NewscafR2;
-                %
-                %            for updateSS=1:length(obj.ssOption.ForceConnUpdate)
-                %
-                %               OldsPM2= obj.ssOption.ForceConnUpdate{updateSS}.BCBPM2 ;
-                %               NewEnds=obj.ssOption.ForceConnUpdate{updateSS}.BCBCur ;
-                %              [~,iiid1]= ismember(NewscafR2,OldsPM2(1:3),'rows')
-                %              NewscafR3( iiid1,:)=NewEnds(1:3);
-                %              [~,iiid2]= ismember(NewscafR2,OldsPM2(4:6),'rows')
-                %              NewscafR3( iiid2,:)=NewEnds(4:6);
-                %
-                %            end
-                
-                %              scafR=circshift(scafR,-2);
-                
-                %                 obj.ScafRouting=[NewscafR2  ] ;
-                
-                
-                
-                
                 %---------------------------------------------------------++++++++++++
-                NOriGPairBCB{1}=NewscafR2 ;
-                ScafR_temp =NOriGPairBCB{1} ;
-                [ ~,whichCyl ] = CheckScafRXover(NOriGPairBCB{1}, tol  ,obj.ScafOption.BundleNoScafLoop) ;  % or add more bundle
+                NOriGPairBCB{scaf_j}=NewscafR2 ;
+                ScafR_temp =NOriGPairBCB{scaf_j} ;
+                [ ~,whichCyl ] = CheckScafRXover(NOriGPairBCB{scaf_j}, tol  ,obj.ScafOption.BundleNoScafLoop) ;  % or add more bundle
                 [~,iy1]=ismember( whichCyl, CombiningXover(:,1:3),'rows' ) ;
                 [~,iy2]=ismember( whichCyl, CombiningXover(:,4:6),'rows' ) ;
                 iyy= union(iy1(iy1~=0) ,iy2(iy2~=0) ) ;
@@ -1828,8 +2456,6 @@ classdef hyperbundle <handle
                             SaveAppliedXoverInFirstRound = zeros(200, 6) ; kx =1;
                         else
                             fprintf('start second round \n') ;
-                            %                             whichCyl2
-                            %                             SaveAppliedXoverInFirstRound(1:kx-1 , :)
                             if nNotGood==0 || isempty(RemoveXovers) ; break;end         % in case that first round is good
                             
                             RemoveXovers= SaveAppliedXoverInFirstRound(1:kx-1 , :) ; % second round try to remove newly added Xovers
@@ -1841,24 +2467,30 @@ classdef hyperbundle <handle
                         
                         for riXover=  1:2:size(RemoveXovers,1)
                             Xover = RemoveXovers(riXover:riXover+1 ,:) ;
-                            TwoCycles=    removeScafXover(obj,NOriGPairBCB,Xover)  ;
+                            TwoCycles=    removeScafXover_general(obj,NOriGPairBCB(scaf_j),Xover)  ;
+                            [~, XoverList]=obj.Given2CylceFindXoverList(TwoCycles{1},TwoCycles{2},  []) ; % avoid in while loop. Query one time for a list, 09/11/2019
+                            
+                            if isempty(XoverList)
+                                EEemptyHappened =1
+                                continue;
+                            end
                             cw= 1;
                             while 1
                                 %                                                 OneXover=obj.Given2CylceFindXoverList(TwoCycles{1},TwoCycles{2},  CombiningXover,ConnectList   )
-                                OneXover=obj.Given2CylceFindXoverList(TwoCycles{1},TwoCycles{2},  []  ) ;
-                                if isempty(OneXover)
-                                    sdff=2;
-                                end
+                                %                                 OneXover=obj.Given2CylceFindXoverList(TwoCycles{1},TwoCycles{2},  []  ) ;
+                                OneXover = XoverList(  randi(size(XoverList,1),1) , :)  ;
+                                OneXover= [OneXover(1,1:6) ;OneXover(1,7:12) ];
                                 [NOriGPairBCBOut,~, ~] = obj.AddXover22cycles(TwoCycles,OneXover)     ;
                                 [ ~,whichCyl2 ] = CheckScafRXover(NOriGPairBCBOut{1}, tol,obj.ScafOption.BundleNoScafLoop) ;
                                 cw=cw+1;
                                 if cw>30
-                                    whichCyl2
-                                    fprintf('reach max loop\n ');
+                                    whichCyl2;
+                                    fprintf('reach max loop\n');
                                     break;   %
                                 end
                                 if size(whichCyl2,1) < nNotGood
-                                    nNotGood= size(whichCyl2,1) ;              NOriGPairBCB= NOriGPairBCBOut;
+                                    nNotGood= size(whichCyl2,1) ;
+                                    NOriGPairBCB{scaf_j}= NOriGPairBCBOut{1};
                                     %                             CombiningXover=[CombiningXover ; OneXover];
                                     SaveAppliedXoverInFirstRound(kx:kx+1,: )= OneXover ; kx=kx+2 ;
                                     break
@@ -1868,20 +2500,19 @@ classdef hyperbundle <handle
                                 end
                             end
                             %                     cw ;
-                            fprintf('nCornerOnBadXover = %i \n',   size(whichCyl2,1))
+                            fprintf('nCornerOnBadXover = %i\n',   size(whichCyl2,1))
                         end
                     end  % for tworound= 1:2
                     
                 end
                 [ Goodcc,whichCylcc ] = CheckScafRXover(NOriGPairBCB{1}, tol,obj.ScafOption.BundleNoScafLoop ) ; whichCylcc
                 fprintf(' In findCyclist,   Goodcc = %i \n '  ,Goodcc)
-                NewscafR2=  NOriGPairBCB{1} ;
+                NewscafR2=  NOriGPairBCB{scaf_j} ;
                 %----------
-                obj.ScafRouting=[NewscafR2  ] ;
-            else
-                obj.ScafRouting=[];
+                obj.ScafRouting{scaf_j}=[NewscafR2  ] ;
             end
             %           obj.getbetterTMatrix
+            %             profile viewer
             
         end  %end of findCycleList
         
@@ -1898,6 +2529,9 @@ classdef hyperbundle <handle
         
         function TwoCycles=removeScafXover(obj,NOriGPairBCB,Xover)
             OneCycle = NOriGPairBCB{1} ;
+            
+            %             NOriGPairBCB
+            %             Xover
             [~,ib] =ismember([Xover(:,1:3) ;Xover(:,4:6)] , NOriGPairBCB{1} ,'rows') ;
             inds =sort(ib) ;  %these four corners need to be removed.
             if inds(1)~=1
@@ -1909,6 +2543,69 @@ classdef hyperbundle <handle
             end
         end % end of  function removeScafXover
         
+        function OutputPairBCB=removeScafXover_general(obj,InputPairBCB,Xover)
+            
+            ListXoverPoints = [Xover(:,1:3) ; Xover(:,4:6) ];
+            InvolvedCycles = [];
+            for k =1: length(InputPairBCB)
+                [AA,~] =ismember(ListXoverPoints ,InputPairBCB{k}, 'rows'  ) ;
+                %             [AA,BB] =ismember( InputPairBCB{k},ListXoverPoints, 'rows'  )
+                if sum(AA)>0
+                    InvolvedCycles=union(InvolvedCycles , k) ;
+                end
+            end
+            OutputPairBCB=InputPairBCB(setdiff(1:length(InputPairBCB),InvolvedCycles)  );
+            if length(InvolvedCycles) ==2  % Xover on two cylcle, result should reduce by one.
+                %             NewCylcle = [];
+                [~,BB1] =ismember(ListXoverPoints ,InputPairBCB{InvolvedCycles(1)}, 'rows'  ) ;
+                [~,BB2] =ismember(ListXoverPoints ,InputPairBCB{InvolvedCycles(2)}, 'rows'  ) ;
+                BB1=BB1(BB1~=0) ;
+                BB2=BB2(BB2~=0) ;
+                NewCylcle= [ InputPairBCB{InvolvedCycles(1)}(1:BB1(1)-1,:) ;  InputPairBCB{InvolvedCycles(2)}(BB2(2)+1:end,:) ;...
+                    InputPairBCB{InvolvedCycles(2)}(1:BB2(1)-1,:) ; InputPairBCB{InvolvedCycles(1)}(BB1(2)+1:end,:) ;];
+                
+                nw=0;
+                while ~(NewCylcle(1,1)==NewCylcle(2,1) && NewCylcle(1,2)==NewCylcle(2,2))
+                    NewCylcle =circshift(NewCylcle,1) ; nw=nw+1 ;
+                    if nw>1000;break;end
+                end
+                
+                
+                OutputPairBCB{end+1} =NewCylcle;
+            elseif length(InvolvedCycles) ==1  % Xover on one cylcle, result should increase by one.
+                [~,BB] =ismember(ListXoverPoints ,InputPairBCB{InvolvedCycles}, 'rows'  ) ;
+                
+                nw=0;
+                while max(BB)== size(InputPairBCB{InvolvedCycles} ,1)
+                    InputPairBCB{InvolvedCycles} =circshift(InputPairBCB{InvolvedCycles},2) ;
+                    [~,BB] =ismember(ListXoverPoints ,InputPairBCB{InvolvedCycles}, 'rows'  ) ;
+                    nw=nw+1 ;
+                    if nw>1000;break;end
+                end
+                
+                BB=sort(BB) ;
+                NewCylcle1 = [InputPairBCB{InvolvedCycles}(1:BB(1)-1,:) ; InputPairBCB{InvolvedCycles}(BB(4)+1:end,:)] ;
+                NewCylcle2 = [InputPairBCB{InvolvedCycles}(BB(2)+1:BB(3)-1,:) ] ;
+                
+                nw=0;
+                while ~(NewCylcle1(1,1)==NewCylcle1(2,1) && NewCylcle1(1,2)==NewCylcle1(2,2))
+                    NewCylcle1 =circshift(NewCylcle1,1) ; nw=nw+1 ;
+                    if nw>1000;break;end
+                end
+                
+                nw=0;
+                while ~(NewCylcle2(1,1)==NewCylcle2(2,1) && NewCylcle2(1,2)==NewCylcle2(2,2))
+                    NewCylcle2 =circshift(NewCylcle2,1) ; nw=nw+1 ;
+                    if nw>1000;break;end
+                end
+                
+                OutputPairBCB{end+1} =NewCylcle1;
+                OutputPairBCB{end+1} =NewCylcle2;
+                %                 case2 =1;
+            else
+                %                 dssdf=3
+            end
+        end
         
         function getbetterTMatrix(obj)
             
@@ -2292,28 +2989,30 @@ classdef hyperbundle <handle
             %           OneXover=OneXover2;
         end  %end of function Given2CylceFindXoverList2
         
-        function OneXover2=Given2CylceFindXoverList(obj,varargin)
+        function [OneXover2,varargout]=Given2CylceFindXoverList(obj,varargin)
+            %              [s,varargout]  OneXover2
             %convert to C5 express
             Cycle1= varargin{1};
-            Cycle2=varargin{2}  ;
+            Cycle2= varargin{2}  ;
             %            ~isempty(varargin{3})
-            % nargin
-            if ~isempty(varargin{3})
-                CombiningXover= varargin{3}  ;
-                CombiningXoverAA= unique([CombiningXover(1:2:end,:),CombiningXover(2:2:end,:)],'rows') ;
-                CombiningXoverBB= unique([CombiningXoverAA(:,1:3);CombiningXoverAA(:,4:6);CombiningXoverAA(:,7:9);CombiningXoverAA(:,10:12)],'rows') ;
-                CombiningXoverBB=setdiff(CombiningXoverBB,[0 0 0],'rows' );
-                
-                ForceConn=varargin{4}  ;
-                CombiningXoverBB=[CombiningXoverBB;ForceConn(:,1:3);ForceConn(:,4:6)];
-                
-            else
-                CombiningXover=[];
-                CombiningXoverAA=[];
-                CombiningXoverBB=[];
-                ForceConn=[];
+            %             nargin;
+            if  length(varargin)>2
+                if ~isempty(varargin{3})
+                    CombiningXover= varargin{3}  ;
+                    CombiningXoverAA= unique([CombiningXover(1:2:end,:),CombiningXover(2:2:end,:)],'rows') ;
+                    CombiningXoverBB= unique([CombiningXoverAA(:,1:3);CombiningXoverAA(:,4:6);CombiningXoverAA(:,7:9);CombiningXoverAA(:,10:12)],'rows') ;
+                    CombiningXoverBB=setdiff(CombiningXoverBB,[0 0 0],'rows' );
+                    
+                    ForceConn=varargin{4}  ;
+                    CombiningXoverBB=[CombiningXoverBB;ForceConn(:,1:3);ForceConn(:,4:6)];
+                    
+                else
+                    CombiningXover=[];
+                    CombiningXoverAA=[];
+                    CombiningXoverBB=[];
+                    ForceConn=[];
+                end
             end
-            
             
             NC1=zeros(size(Cycle1,1),2);
             NC2=zeros(size(Cycle2,1),2);
@@ -2326,14 +3025,17 @@ classdef hyperbundle <handle
                 NC2(iNC2,:)=[ obj.RelateTable(ind,5), Cycle2(iNC2,3)];
             end
             %------------F-Convert   % to C5 express
-            List=[];  OneXover=[];
+            %             List=[];
+            OneXover=[];
+            
+            List=zeros(900000, 12 ) ; ccL =1 ;
             for edgeInNC1= 1:2:size(NC1,1)-1
                 for edgeInNC2= 1:2:size(NC2,1)-1
                     C5cyl1=NC1(edgeInNC1,1)   ;
                     C5cyl2=NC2(edgeInNC2,1);
-%                     if C5cyl2==34 && C5cyl1==111
-%                         sdfsf=3
-%                     end
+                    %                     if C5cyl2==34 && C5cyl1==111
+                    %                         sdfsf=3
+                    %                     end
                     
                     ZRange1=sort([NC1(edgeInNC1:edgeInNC1+1,2)]) ;
                     %                                        [size(NC2), edgeInNC2]
@@ -2362,7 +3064,7 @@ classdef hyperbundle <handle
                                 XOinZ= FindZ2HC( CylMaster,CylInSlave,Bundle.CylInplanePosition,rnd,CinMoveUp);
                             end
                             
-                            if XOinZ<max(ZRange2) && XOinZ> min(ZRange2)
+                            if XOinZ<max(Intersec) && XOinZ> min(Intersec)
                                 XOinZ2=  XOinZ -1+2*CinMoveUp;
                                 if CinMoveUp==0   %  debug result
                                     XOinZ2=XOinZ2+1;
@@ -2370,43 +3072,27 @@ classdef hyperbundle <handle
                                 end
                                 OneXover=[ChooseBundle,CylMaster,XOinZ,ChooseBundle,CylInSlave,  XOinZ,...
                                     ChooseBundle,CylInSlave,XOinZ2,ChooseBundle,CylMaster,  XOinZ2]  ;
-                                List=[ List; OneXover];
-                                %                         return
+                                %                                 List=[ List; OneXover];
+                                List(ccL,:) =OneXover ;
+                                ccL=ccL+1 ;
+                                %                                 %                         return
+                                %                                 if sum(OneXover==[20     3   124    20     4   124    20     4   123    20     3   123])==12
+                                %                                     sdf=3
+                                %                                     edgeInNC1
+                                %                                     edgeInNC2
+                                %                                 end
                             end
                         end
                     end
                 end
             end
+            List=List(1:ccL-1 ,:) ;
             
             tol=8  ;
             AA=unique(List,'rows');
             BadAA=zeros(size(AA,1),1);
-            %             if ~isempty(AA)
-            %             if ismember([7,14] , AA(:,4:5) ,'rows' )
-            %                 sdfsdf=3
-            %             end
-            %             end
-            %             for filteri=1:length(BadAA)
-            %                 subAA= AA(filteri,:);
-            %                 Bundle=obj.containBundle{AA(filteri,1)};
-            %                 TwoCyls=unique(subAA([2, 5 ,8, 11]));
-            %                 Limits= [Bundle.Zbase1(TwoCyls) + ones(1,2)*obj.ssOption.BundleShiftTwoSide(AA(filteri,1),1 ); Bundle.Zbase2(TwoCyls)-ones(1,2)*obj.ssOption.BundleShiftTwoSide(AA(filteri,1),2 )   ];     %Sep17 2018
-            %                 % avoid scaffold Xover in the shrinking area
-            %
-            %
-            %                 %               Limits= [Bundle.Zbase1(TwoCyls)  ; Bundle.Zbase2(TwoCyls)];
-            %
-            %                 Zavg=mean(subAA([3, 6 ,9, 12]));
-            %                 if Zavg- max(Limits(1,:)) <8 || -Zavg + min(Limits(2,:)) <8
-            %                     BadAA(filteri)=1;
-            %                 end
-            %             end
-            %hard code
             IDontWantXoverOn = []  ; % hard code, exclude crossover on these bundles.
-            %           IDontWantXoverOn=[1,2,3,9:11] ; %fprintf('scaffold xover limited on certain bundle %s \n', num2str(IDontWantXoverOn)) ;
             IDontWantXoverOn = obj.ScafOption.NoScafXover ;
-            
-            
             for filteri=1:length(BadAA)
                 subAA= AA(filteri,:);
                 Bundle=obj.containBundle{AA(filteri,1)};
@@ -2435,9 +3121,43 @@ classdef hyperbundle <handle
                 
             end
             
+            
+            
             OneXover2=[];
             AA(BadAA==1,:)=[];
+            
+            %+----- take some Xovers out for multi-scaf algorithm, block some adjc.
             if ~isempty(AA)
+                
+                BadAA2 = ismember( AA(:,[1,2,4,5]),obj.OrgBlockAdj ,'rows'   ) ;
+                AA(BadAA2==1,:)=[];
+            end
+            if ~isempty(AA)
+                
+                BadAA3 = ismember( AA(:,[4,5,1,2]),obj.OrgBlockAdj ,'rows'   ) ;
+                AA(BadAA3==1,:)=[];
+            end
+            %-----------  take some Xovers out for multi-scaf algorithm, block some Z range in each bundle.
+            if ~isempty(obj.SaveBlockZRange) && ~isempty(AA)
+                
+                AllBlockZRange = unique( vertcat(obj.SaveBlockZRange{:}) ,'rows') ;  % [bundle, Zleft, Zright  ]
+                AAO =AA ;
+                IndBB=zeros(size(AA,1) ,1) ;
+                for ka = 1 : length(IndBB)
+                    Zmean  =mean(AA(ka,[3,6,9,12]) ,2) ;
+                    IndBBAll  = and( ismember(AllBlockZRange(:,1),AA(ka,1) ) ,   and(Zmean> AllBlockZRange(:,2) ,Zmean< AllBlockZRange(:,3) )    )  ;
+                    IndBB(ka) =  sum(IndBBAll)>0 ;
+                end
+                
+                AA(IndBB==1,:)=[];
+                
+                
+                %             sdfsdf=3
+            end
+            %---------
+            
+            if ~isempty(AA)
+                varargout{1} =AA ;
                 BB=AA(randi(size(AA,1)),:);
                 OneXover2=  [ BB(1:6); BB(7:12) ];
                 TestTwoCycle=[{Cycle1}; {Cycle2}];
@@ -2453,7 +3173,8 @@ classdef hyperbundle <handle
                         return
                     end
                 end
-                
+            else
+                varargout{1} =[];
             end
             if  isempty(OneXover2)
                 fsdf=3 ;
@@ -2462,6 +3183,22 @@ classdef hyperbundle <handle
             
         end  %end of function Given2CylceFindXoverList
         
+        function GetOrgBlockAdj(obj)
+            OrgBlockAdjQQ= [-1,-1,-1,-1] ;
+            
+            if ~isempty(obj.SaveBlockAdjacency)
+                for k = 1 : length( obj.containBundle)
+                    if          ~isempty(obj.SaveBlockAdjacency{k})
+                        MM =  obj.SaveBlockAdjacency{k} ;
+                        OrgBlockAdjQQ=[OrgBlockAdjQQ ; [k*ones(size(MM,1) ,1) , MM(:,1)  ,k*ones(size(MM,1) ,1) , MM(:,2)   ] ] ;
+                    end
+                end
+            end
+            OrgBlockAdjQQ= setdiff(OrgBlockAdjQQ ,[-1,-1,-1,-1],'rows') ;
+            
+            obj.OrgBlockAdj = OrgBlockAdjQQ ;
+            %             OrgBlockAdj
+        end
         
         %         function OneXover=Given2CylceFindXoverListCOPY(obj,Cycle1,Cycle2)
         %             %determin in which bundle
@@ -2555,14 +3292,37 @@ classdef hyperbundle <handle
             NumberOfCylceInvolved= length(  takeU  )    ;
             if NumberOfCylceInvolved==1
                 CellA=OriGPairBCB{takeU};
-                CheckPoint=Xover(:,4:6);    %--------
+                %----------Optimize performance 09/11/2019, base by base
+                %sort
+                BaseByBase_BCB = interpolateBase_ThreeCol( CellA ) ;
+                [AA,BB] = ismember(FourPoints ,BaseByBase_BCB  ,'rows' )       ;
+                
+                [a,b] = sortrows(BB) ;
+                FourPoints=FourPoints(b,:)  ;
+                BB=BB(b,:)  ;
                 
                 
+                [AA2,BB2] = ismember(CellA ,  BaseByBase_BCB ,'rows' ) ;
                 
+                CC1_new= [ BaseByBase_BCB( BB2(BB2<min(BB)) ,:) ;  FourPoints(1,: ) ; FourPoints(4,: ) ;  BaseByBase_BCB( BB2(BB2>max(BB)) ,:) ] ;
+                CC2_new= [  FourPoints(2,: ) ; BaseByBase_BCB( BB2( and(BB2<max(BB),BB2>min(BB) )   ) ,:)  ;  FourPoints(3,: ) ] ;
+                
+                CC1_new= unique(CC1_new,'rows','stable');
+                CC2_new= unique(CC2_new,'rows','stable');
+                
+                InputCell(takeU)=[];
+                InputCell{end+1}=CC1_new;
+                InputCell{end+1}=CC2_new;
+                NOriGPairBCB=InputCell;
+                %                 UseNew =1
+                return
+                %-----------------------
+                
+                %                 CheckPoint=Xover(:,4:6);    %--------
                 InsertPosition=zeros(2,2);
                 for iraw=1:size(CellA,1)-1
-                    MM1=[CellA(iraw:iraw+1,:);CheckPoint(1,:)];
-                    MM2=[CellA(iraw:iraw+1,:);CheckPoint(2,:)];
+                    MM1=[CellA(iraw:iraw+1,:);Xover(1,4:6)];
+                    MM2=[CellA(iraw:iraw+1,:);Xover(2,4:6)];
                     NN1=[CellA(iraw:iraw+1,:);Xover(1,1:3)];
                     NN2=[CellA(iraw:iraw+1,:);Xover(2,1:3)];
                     
@@ -2578,7 +3338,6 @@ classdef hyperbundle <handle
                     if size(unique(NN2(:,1:2),'rows') ,1)==1  && (NN2(1,3)-NN2(3,3))*(NN2(2,3)-NN2(3,3))<0
                         InsertPosition(2,1)= iraw+0.5 ;
                     end
-                    
                     
                 end
                 for checkside=1:2
@@ -2636,21 +3395,23 @@ classdef hyperbundle <handle
                     %
                     %
                     
-                    
-                    
-                    seFcnXTo1C2=2;
+                    %                     seFcnXTo1C2=2;
                 end
                 CC1= unique(C1,'rows','stable');
                 CC2= unique(C2,'rows','stable');
                 if mod(size(CC1,1),2)==1 || mod(size(CC2,1),2)==1
-                    sdfsf=234
+                    sdfsf=234 ;
                 end
                 %                 XXX{1}=C1
                 %                 obj.drawBCBdata2(InputCell{2},5)   obj.drawBCBdata2({CellA},5)
                 
                 InputCell(takeU)=[];
-                InputCell{end+1}=CC1;
+                InputCell{end+1}=CC1;   % weird
                 InputCell{end+1}=CC2;
+                
+                CC1_new
+                CC2_new
+                ssdfs=3
             end
             NOriGPairBCB=InputCell;
         end   % End of func AddXover2OneCycle
@@ -2993,8 +3754,8 @@ classdef hyperbundle <handle
                     else
                         for icellA=1:size(CellA,1)-1
                             QQA= [  CellA(icellA,:) ; FourPoints(2*iP2-1:2*iP2,:) ; CellA(icellA+1,:)];
-                            if size(unique(QQA(:,1:2),'rows'),1)==1
-                                
+                            if  and(  sum(QQA(1,1)*ones(1,4) == QQA(:,1))==4 ,  sum(QQA(1,2)*ones(1,4) == QQA(:,2))==4 )
+                                %                           if size(unique(QQA(:,1:2),'rows'),1)==1
                                 Insettest=[ CellA(icellA,:) ; mean(FourPoints(2*iP2-1:2*iP2,:)) ; CellA(icellA+1,:)];
                                 if size(union(  Insettest(:,1:2) ,[-1 -1 ],'rows') ,1)==2 %check on same edge
                                     if  (Insettest(2,3)- Insettest(1,3))*(Insettest(2,3)- Insettest(3,3))<=0
@@ -3022,8 +3783,9 @@ classdef hyperbundle <handle
                     else
                         for icellB=1:size(CellB,1)-1
                             QQB= [ CellB(icellB,:) ; FourPoints(2*iP2-1:2*iP2,:) ; CellB(icellB+1,:)];
-                            if size(unique(QQB(:,1:2),'rows'),1)==1
-                                
+                            %                             if   sum(CellB(icellB,:) ==FourPoints(2*iP2-1,:) )==2
+                            if and(  sum(QQB(1,1)*ones(1,4) == QQB(:,1))==4 ,  sum(QQB(1,2)*ones(1,4) == QQB(:,2))==4 )
+                                %                           if size(unique(QQB(:,1:2),'rows'),1)==1
                                 Insettest=[ CellB(icellB,:) ; mean(FourPoints(2*iP2-1:2*iP2,:)) ; CellB(icellB+1,:)];
                                 if size(union(  Insettest(:,1:2) ,[-1 -1 ],'rows') ,1)==2 %check on same edge
                                     if  (Insettest(2,3)- Insettest(1,3))*(Insettest(2,3)- Insettest(3,3))<=0
@@ -3041,6 +3803,7 @@ classdef hyperbundle <handle
                         end
                     end
                 end
+                
                 
                 if  ~exist('NcellA') ||  ~exist('NcellB')
                     NOriGPairBCB=InputCell;
@@ -3157,7 +3920,7 @@ classdef hyperbundle <handle
                 %                text(xydata(2,1)+ditt,-xydata(2,2), num2str(k+0.1));
                 minmin=min([minmin; xydata(:,1)]);
             end
-            title(strcat(' Number of Cycle = ', num2str(n)));
+            title(strcat(' Number of Cycles = ', num2str(n)));
             
             %             for show=1:size(obj.GlobalCylinderIndex,1)
             %                 text(minmin-10, -show -5*obj.GlobalCylinderIndex(show,1) , strcat( num2str(obj.GlobalCylinderIndex(show,1)), '-' ,  num2str(obj.GlobalCylinderIndex(show,2))));
@@ -3247,7 +4010,7 @@ classdef hyperbundle <handle
                 %                 end
                 %
                 % only square lattice has preferred pairing options.
-%                 Sp_hard=[9 10 11 12] ;  %hard code
+                %                 Sp_hard=[9 10 11 12] ;  %hard code
                 if preference==3  && strcmp(obj.containBundle{Nbundle}.type,'SQ')     %|| ismember(Nbundle,[3,4])
                     for deletList=1:length(U)
                         Uxy=obj.containBundle{Nbundle}.CylInplanePosition(U(deletList),:);
@@ -3398,10 +4161,9 @@ classdef hyperbundle <handle
                     'Yes','No' ,'Yes');
                 if strcmp(answer,'Yes')
                     
-                    Info=  table_OH.Data;
+                    Info=  table_OH.Data; QQ= cell2mat(Info(:,6:7) ) ; QQ=QQ(:) ; QQ2 = repelem(QQ, 2) ;% for 0-nt overhang
                     IndEff= cellfun(@isequal,Info(:,3) , num2cell(ones(size(Info(:,3) ) ) ) ) ;
                     InfoHide= table_OH.UserData ;
-                    
                     Nick= InfoHide(IndEff,[1 4]);   %Nick= InfoHide(:,[1 4]);
                     Nick=Nick(:);
                     ConvertC3= zeros(length(Nick)*2 , 2) ;
@@ -3412,9 +4174,14 @@ classdef hyperbundle <handle
                         ConvertC3(2*k-1,:) =[C3_ind, Arr(3)] ;
                         ConvertC3(2*k,:) =[C3_ind, Arr(4)] ;
                     end
+                    ConvertC3=ConvertC3(QQ2~=0 ,:) ;
+                    
                     InitialStappEndsOri=InitialStappEnds;
                     InitialStappEnds=[InitialStappEnds; ConvertC3];  InitialStappEnds=sortrows(InitialStappEnds);
                     obj.UserWantOH='Yes' ;
+                    %------hard coding scripts 
+%                     stepAssign=2 ;  Ex_DecoratePlatesWithOverhangs ;
+                    
                 else
                     obj.UserWantOH='No' ;
                 end
@@ -3460,7 +4227,24 @@ classdef hyperbundle <handle
                 if strcmp(obj.ScafOption.prevStack ,'polyT')
                     clearance=15;
                 else
-                    clearance=8;   % 8 change 6/19
+%                     clearance=3;   % 8 change 6/19 : default 8
+
+                   opts.Interpreter = 'tex';
+
+                    prompt = {' \fontsize{12} Enter the clearance that staple Xovers are ignored from ends:  (Min=3)'};
+                    dlgtitle = 'Input';
+                    dims = [1 60];
+                    definput = {num2str(8)};
+                    answer = inputdlg(prompt,dlgtitle,dims,definput,opts) ; 
+                   QQ=  round(str2double(answer{1} ) ) ;
+                   if QQ>2
+                     clearance=QQ ;  
+                   else
+                    clearance=8 ;   
+                   end
+                   clearance
+                   
+
                 end
                 
                 [U,V]=find(AdjM~=0);   %means cylinder in C5
@@ -3557,8 +4341,8 @@ classdef hyperbundle <handle
                                 EdgeList{edge,2}=[EdgeList{edge,2} zz zz+1];
                                 TwoDExpre(nTwo:nTwo+3 ,:) =[PosCyl zz ;NegCyl zz;PosCyl zz+1;NegCyl zz+1] ;nTwo=nTwo+4 ;
                                 
-%                                 TwoDExpre(end+1,:)=[PosCyl zz];    TwoDExpre(end+1,:)=[NegCyl zz];
-%                                 TwoDExpre(end+1,:)=[PosCyl zz+1];  TwoDExpre(end+1,:)=[NegCyl zz+1];
+                                %                                 TwoDExpre(end+1,:)=[PosCyl zz];    TwoDExpre(end+1,:)=[NegCyl zz];
+                                %                                 TwoDExpre(end+1,:)=[PosCyl zz+1];  TwoDExpre(end+1,:)=[NegCyl zz+1];
                             end
                         end
                     else
@@ -3586,11 +4370,11 @@ classdef hyperbundle <handle
                             if (sum(DCellList{PosCyl}(zz,:))~=-4) &&(sum(DCellList{NegCyl}(zz,:))~=-4)  && mod(Izzk(1),2)==0  && mod(Izzl(1),2)==0 %Both two sides are occupied
                                 EdgeList{edge,2}=[EdgeList{edge,2} zz zz+1];
                                 TwoDExpre(nTwo:nTwo+3 ,:) =[PosCyl zz ;NegCyl zz;PosCyl zz+1;NegCyl zz+1] ;nTwo=nTwo+4 ;
-%                                 TwoDExpre(end+1,:)=[PosCyl zz];    TwoDExpre(end+1,:)=[NegCyl zz];
-%                                 TwoDExpre(end+1,:)=[PosCyl zz+1];  TwoDExpre(end+1,:)=[NegCyl zz+1];
+                                %                                 TwoDExpre(end+1,:)=[PosCyl zz];    TwoDExpre(end+1,:)=[NegCyl zz];
+                                %                                 TwoDExpre(end+1,:)=[PosCyl zz+1];  TwoDExpre(end+1,:)=[NegCyl zz+1];
                             end
                         end
-                    end                    
+                    end
                 end
                 TwoDExpre=TwoDExpre(1:nTwo-1,:) ;
                 
@@ -4115,7 +4899,6 @@ classdef hyperbundle <handle
                 MM=size(obj.ScafdigitHC{1},1);
             end
             
-            
             NoOfCyls=max(obj.RelateTable(:,5));
             StappCellList=cell(NoOfCyls,1);
             for i=1:NoOfCyls   %create shell to store information
@@ -4192,6 +4975,35 @@ classdef hyperbundle <handle
         end %end of ConvertStap
         
         
+        function [h_bingraph,Graph,ST_list ]=FindStapGraph(obj)
+            %             tic
+            ST_list = zeros(10000,2) ; cc= 1 ;
+            for i= 1 : length(obj.StapList3)
+                I_stap = obj.StapList3{i} ;
+                for j= i+1: length(obj.StapList3)
+                    J_stap = obj.StapList3{j} ;
+                    if J_stap(1,1) == I_stap(end,1) && abs( J_stap(1,2)-I_stap(end,2))==1
+                        ST_list(cc,:) = [i ,j] ; cc=cc+1;
+                    end
+                    if I_stap(1,1) == J_stap(end,1) && abs( I_stap(1,2)-J_stap(end,2))==1
+                        ST_list(cc,:) = [j ,i] ;cc=cc+1;
+                    end
+                end
+            end
+            ST_list=ST_list(1:cc-1, :) ;
+            Graph = digraph(ST_list(:,1),ST_list(:,2)) ;
+            NodesTobeAdded =max(max(ST_list))+1 : i ;
+            for k=1: length(NodesTobeAdded)
+                Graph = addnode(Graph,1) ;
+            end
+            
+            f552=figure(552);clf ; h_bingraph = plot(Graph); axis off;
+            f552.Name='Staple Graph' ; set(f552,'NumberTitle','off');
+            bins = conncomp(Graph) ;
+            obj.StapGraphBin = bins ;
+            %             toc
+        end
+        
         function obj=FindStapStep2(obj)  %---------
             %             StapleCell=obj.StapList;   % already convert to C5 in FindStapStep  Nov 14 2018
             %             % convert to C5
@@ -4204,7 +5016,7 @@ classdef hyperbundle <handle
             %             end
             %---
             
-            ScafAndStapClearance=10; % hard, may change for overhang design
+            ScafAndStapClearance=8; % hard, may change for overhang design
             GetScafXOver(obj);
             obj=UpdateStapBP(obj,ScafAndStapClearance);
             
@@ -4228,17 +5040,17 @@ classdef hyperbundle <handle
                         
                     end
                 end
-                if sum(HaveAppliedXovers)==length(HaveAppliedXovers)  ||nwhile>30
+                if sum(HaveAppliedXovers)==length(HaveAppliedXovers)  ||nwhile> 6
                     break;
                 end
                 
-                if nwhile==28
+                if nwhile==4
                     TakeEasy=1;
                 end
                 nwhile=nwhile+1;
             end
             tt=StapleCell;
-            for ii=1:20
+            for ii=1:5
                 [ StapleCell ] = CalibStapDir( StapleCell,obj.RelateVec);
                 [ StapleCell ] = OrganizeStapList( StapleCell,obj ,tt);
             end
@@ -4291,14 +5103,19 @@ classdef hyperbundle <handle
         
         function ConnectStapleIf_0ntOnScaf(obj)
             fprintf('Connecting staples if ssDNA on Scaf=0 nt. \n ')
-            ScafRC5 =  obj.scafC5 ;
+            ScafRC5 =  obj.scafC5{1} ;
+            for k = 2 : length(obj.scafC5)
+                ScafRC5= [ScafRC5 ;  obj.scafC5{k} ] ;
+            end
+            [aa,bb] = cellfun(@size,obj.scafC5) ;
+            
             ConnectedStapleList = [-1,-1];
             for i=1: length(obj.StapList)
                 for j=1:length(obj.StapList)
                     if i==j ; continue;end
                     Headi_Tailj = [obj.StapList{i}(1,:) ; obj.StapList{j}(end,:) ] ;
                     [a,b] = ismember(Headi_Tailj, ScafRC5 ,'rows' ) ;   % check head of i and tail of j staple are consecutive in scaf R
-                    if sum(a)==2 && diff(b)==1
+                    if sum(a)==2 && diff(b)==1 &&  sum( ismember(b, cumsum(aa)) )==0  % make  sure is not connected due to multi-scaffold. 08/12/2019
                         ConnectedStapleList=union(ConnectedStapleList , [i j],'rows') ;
                     end
                 end
@@ -4346,6 +5163,7 @@ classdef hyperbundle <handle
             %            fprintf('Staple %i has  NoRepeat= %i \n',k , NoRepeat)
             %             end
         end % end of ConnectStapleIf_0ntOnScaf
+        
         function ConnectStaple3If_0ntOnScaf(obj)
             fprintf('Connecting staples if ssDNA on Scaf=0 nt. \n ')
             ScafRC5 =  obj.scafC5 ;
@@ -4405,7 +5223,13 @@ classdef hyperbundle <handle
         end % end of ConnectStaple3If_0ntOnScaf  %input: obj.StapList3 output: obj.StapList3
         
         function obj=GetScafXOver(obj)    %Get property: ScafXover  %edit from PartBundle 4/8
-            Seq=[obj.ScafRouting(1:end-1,:) obj.ScafRouting(2:end,:)];
+            
+            PseudoOneScaf =  obj.ScafRouting{1} ;
+            for k = 2: length(obj.ScafRouting)
+                PseudoOneScaf= [PseudoOneScaf ;  obj.ScafRouting{k} ] ;
+            end
+            
+            Seq=[PseudoOneScaf(1:end-1,:) PseudoOneScaf(2:end,:)];
             SeqGind=zeros(size(Seq,1),4);
             for i2=1:size(Seq,1)
                 [~,A1]=ismember(Seq(i2,1:2), obj.RelateTable(:,1:2),'rows');
@@ -4415,12 +5239,6 @@ classdef hyperbundle <handle
                 SeqGind(i2,3) = A2 ;
                 SeqGind(i2,4) = Seq(i2,6)  ;
             end
-            
-            %             for i=1:size(Seq,1)
-            %                 Seq(i,1)= obj.RTable(3, Seq(i,1));
-            %                 Seq(i,3)= obj.RTable(3, Seq(i,3));
-            %             end
-            
             
             BPL=obj.stapBPinCell;
             MCyl=max(max(SeqGind(:,[1 3])));
@@ -4444,7 +5262,6 @@ classdef hyperbundle <handle
                 end
             end
             
-            
             Result=cell(size(BPL));
             for jj=1:size(BPL,1)
                 Result{jj,1}=BPL{jj,1};
@@ -4462,6 +5279,7 @@ classdef hyperbundle <handle
                 end
             end
             obj.ScafXover=Result;
+            
         end %end of getscafXover
         
         
@@ -4512,10 +5330,8 @@ classdef hyperbundle <handle
             BundleGroupWithSameCylPosition = conncomp(G) ;
         end
         
-        
-        
         function obj=CreateTFWindow(obj,PremPair,varargin)
-%             tic
+            %             tic
             if ~isempty(varargin)
                 AssignAdjM=varargin{1};nargin;
                 if nargin>3
@@ -4596,7 +5412,7 @@ classdef hyperbundle <handle
             %                  aH.Position(3)=0.5; aH.Position(1)=0.05;
             %             aH.UserData='ax1';
             
-           
+            
             
             %---------
             patchH=cell(3, length(obj.containBundle)) ;
@@ -4650,34 +5466,34 @@ classdef hyperbundle <handle
                 %             shp=alphaShape(QQ,2,'RegionThreshold',200);
                 %           bundlei
                 %           try
-%                 t2=toc ;
+                %                 t2=toc ;
                 %                 size(QQ)
                 %                 k = boundary(QQ,0.75);
                 %                 QQ=  QQ(unique(k) ,:) ; size(QQ) ;
                 %                 shp=alphaShape(QQ,Inf);
                 
                 
-                 shp=alphaShape(QQ,2);
+                shp=alphaShape(QQ,2);
                 
-%                 shp=alphaShape(QQ,1.3);
-%                 crit = criticalAlpha(shp, 'one-region') ;
+                %                 shp=alphaShape(QQ,1.3);
+                %                 crit = criticalAlpha(shp, 'one-region') ;
                 
-%                 t3=toc ;
+                %                 t3=toc ;
                 patchH{1,bundlei}=plot(shp);   %plot Volume
-%                 t4=toc;
+                %                 t4=toc;
                 %---reduce number of faces to increase graphic performance
                 TargetFaces= 400;
                 R=TargetFaces/size(patchH{1,bundlei}.Faces ,1);
-               
+                
                 reducepatch(patchH{1,bundlei},R) ;
-                 
+                
                 %------------  May 10
                 
-%                  d32 =t3-t2
-%                  d43 =t4-t3
+                %                  d32 =t3-t2
+                %                  d43 =t4-t3
                 patchH{1,bundlei}.EdgeColor='none' ;
                 patchH{1,bundlei}.FaceAlpha=0.5;
-
+                
                 patchH{1,bundlei}.FaceColor=[0.3,0.3,0.3]; % bundle color
                 %                 patchH{1,bundlei}.FaceColor(1)=0;
                 patchH{1,bundlei}.UserData= patchH{1,bundlei}.FaceColor;
@@ -4719,7 +5535,7 @@ classdef hyperbundle <handle
                     %                 ExaHelixTable=[ExaHelixTable;GroupAdd]; % old
                     ExaHelixTable=[ExaHelixTable;GroupAdd2];
                 end
-                  
+                
                 PrevPairRes= PremPair.CellPairList{bundlei};
                 AddToExaHT=zeros(size(PrevPairRes,1)*2,7);  %side connect points [base, -Cyl1,-Cyl2, Gx,Gy,Gz];
                 for iPre=1:size(PrevPairRes)
@@ -4744,7 +5560,10 @@ classdef hyperbundle <handle
                     end
                 end
                 ExaHelixTable=[ExaHelixTable ;AddToExaHT];
-
+                
+                ExaHelixTable=ExaHelixTable( ~ismember(ExaHelixTable,zeros(1,7),'rows') ,:) ;
+                
+                
                 patchH{3,bundlei}=scatter3( ExaHelixTable(:,5),ExaHelixTable(:,6),ExaHelixTable(:,7),'k' ,'Marker','o','MarkerFaceColor',[0.3 0.3 0.3],'HitTest','off');
                 patchH{3,bundlei}.MarkerFaceAlpha=1;
                 %             patchH{3,bundlei}.SizeData=20;
@@ -4752,7 +5571,7 @@ classdef hyperbundle <handle
             end
             
             
-             
+            
             
             axis auto;grid on;
             nBumdle=length(obj.containBundle);
@@ -4885,7 +5704,7 @@ classdef hyperbundle <handle
             end
             tH3.Data=tH2.Data(IndsRemain==1,:) ;
             %------------
-              
+            
             tH2.CellEditCallback =@(src,evn)tH2Change(obj,src,evn,patchH,tH3 ) ;
             
             
@@ -4959,8 +5778,8 @@ classdef hyperbundle <handle
             
             TypeStr="auto" ;
             obj.TakeSeveralV3Type= repmat(TypeStr, size(obj.LineCombination,1), 1) ;
-                                  
-            AssignIcon( btn1,'FindXover.jpg' ); btn1.TooltipString = 'Find scaffold connections to assemble bundles';
+            
+            AssignIcon( btn1,'FindXOver.jpg' ); btn1.TooltipString = 'Find scaffold connections to assemble bundles';
             AssignIcon( btn2,'ssDNA.jpg' ); btn2.TooltipString = 'Use helical model to specify ssDNA lengths on scaffold connections';
             AssignIcon( btn3,'OrthogonalR.jpg' ); btn3.TooltipString = 'Snap to the closest X-Y-Z axis in Global coordinate';
             AssignIcon( btn9,'AddOrRemove.jpg' );  btn9.TooltipString = 'Add or remove bundles or mechanisms.';
@@ -4987,7 +5806,7 @@ classdef hyperbundle <handle
             %             drawnow;
             %           LineCombination
             %           gctab
-%                t6=toc
+            %                t6=toc
         end %end of CreateTF
         
         function IgnoreStrBundleLeaveIndex(obj,src,evn)
@@ -5195,6 +6014,9 @@ classdef hyperbundle <handle
                     end
                 end
             end
+            
+            
+            
             axes(axCurrent);
             uistack(findobj(gcf,'Tag', 'HidenAssemblyMain'),'top') ;
             
@@ -5299,15 +6121,15 @@ classdef hyperbundle <handle
             fH= findobj(gcf,'Tag','ss_Assembly') ;
             AdjM=obj.BundleAdjM;
             
-                        B=triu(AdjM) ;
-                        C=tril(AdjM) ;
-                        II= (B)~=transpose(C) ;
-                        if sum(sum(II))>0
-                            fsdfsf=1213
-                        end
-                        
-                        AdjM=B+transpose(B) ;
-                        obj.BundleAdjM=AdjM ;
+            B=triu(AdjM) ;
+            C=tril(AdjM) ;
+            II= (B)~=transpose(C) ;
+            if sum(sum(II))>0
+                fsdfsf=1213
+            end
+            
+            AdjM=B+transpose(B) ;
+            obj.BundleAdjM=AdjM ;
             
             Combination= obj.LineCombination;
             fH.UserData.tb3.Data=fH.UserData.tb2.Data ;
@@ -5380,22 +6202,22 @@ classdef hyperbundle <handle
                 AdjM(Combination(lineIndex,2),Combination(lineIndex,1))=0;
                 AdjM;
                 GBundle=graph(AdjM);bins = conncomp(GBundle);
-%                 if max(bins)==1   %All bundle is connected, no along bundle
-                    obj.TakeSeveralV3{lineIndex}=[];  % clear forcedConnection in this edge
-                    obj.BundleAdjM=AdjM;
-                    fH.UserData.BundleConnectivity{lineIndex}.Color=[0 0 0] ; %turn into black
-                    fH.UserData.BundleConnectivity{lineIndex}.LineStyle=':';
-                    fH.UserData.textNumberHandle{lineIndex}.String=num2str(0);
-                    textConnQS=findobj(gcf,'Tag','textConnQS') ;
-                    textConnQS.String=strcat('Conn =',num2str(0));
-                    fH.UserData.tb2.Data{ lineIndex,5} = 0;  fH.UserData.tb3.Data{ lineIndex,5} = 0;
-                    fH.UserData.tb2.Data{ lineIndex,2}='Both'; fH.UserData.tb3.Data{ lineIndex,2}='Both';
-                    fH.UserData.tb2.Data{ lineIndex,4}='Both'; fH.UserData.tb3.Data{ lineIndex,4}='Both';
-                    obj.TakeSeveralV3Type{lineIndex} ='auto';
-                    delete(fH.UserData.pH{lineIndex}) ;
-%                 else
-%                     fprintf('Create isolated bundles. Nothing happen. \n')
-%                 end
+                %                 if max(bins)==1   %All bundle is connected, no along bundle
+                obj.TakeSeveralV3{lineIndex}=[];  % clear forcedConnection in this edge
+                obj.BundleAdjM=AdjM;
+                fH.UserData.BundleConnectivity{lineIndex}.Color=[0 0 0] ; %turn into black
+                fH.UserData.BundleConnectivity{lineIndex}.LineStyle=':';
+                fH.UserData.textNumberHandle{lineIndex}.String=num2str(0);
+                textConnQS=findobj(gcf,'Tag','textConnQS') ;
+                textConnQS.String=strcat('Conn =',num2str(0));
+                fH.UserData.tb2.Data{ lineIndex,5} = 0;  fH.UserData.tb3.Data{ lineIndex,5} = 0;
+                fH.UserData.tb2.Data{ lineIndex,2}='Both'; fH.UserData.tb3.Data{ lineIndex,2}='Both';
+                fH.UserData.tb2.Data{ lineIndex,4}='Both'; fH.UserData.tb3.Data{ lineIndex,4}='Both';
+                obj.TakeSeveralV3Type{lineIndex} ='auto';
+                delete(fH.UserData.pH{lineIndex}) ;
+                %                 else
+                %                     fprintf('Create isolated bundles. Nothing happen. \n')
+                %                 end
             end
             obj.BundleAdjM;
             IndsRemain= zeros(size(fH.UserData.tb2.Data ,1),1) ;
@@ -6267,6 +7089,26 @@ classdef hyperbundle <handle
             fprintf('The estimate scaffold lengths = %s \n', num2str(TotalL));
         end
         
+        function TotalL = EstimateDsScafL_part(obj,defaultBundles)
+            
+            prompt = {'Enter Bundle indexes to calculate approximate scaffold size:'};
+            dlgtitle = 'Input';
+            dims = [1 35];
+            definput = {num2str(defaultBundles)};
+            answer = inputdlg(prompt,dlgtitle,dims,definput) ;
+            
+            QuerryBundles = str2num(answer{1}) ;
+            TotalL=0;
+            for k=1: length(QuerryBundles )
+                dsInThis =  sum(obj.containBundle{QuerryBundles(k)}.Zbase2-obj.containBundle{QuerryBundles(k)}.Zbase1+1)  ;
+                TotalL=TotalL+dsInThis;
+            end
+            fprintf('The estimate scaffold lengths for bundles [%s] = %s \n',answer{1} ,num2str(TotalL));
+        end
+        
+        
+        
+        
         function obj=keyMove(obj,src,evn,patchH,popupH,checkH,tH,V0CylinderXYZ,editH,textBundle ,checkH2_GL,txtH2 )
             %             df=111;
             %             evn
@@ -6295,17 +7137,24 @@ classdef hyperbundle <handle
                         HighLightBase(sH,evnSH,sH3D) ;
                     end
                     return
+                    
+                case 'h'
+                    implay('AsssemblyTest.mp4')
                 case 'l'
                     obj.EstimateDsScafL ;    return;
-                case 'm'
-                    helpCADDOM(2) ;          return;
+                case 'k'
+                    defaultBundles= popupH.Value ;
+                    obj.EstimateDsScafL_part(defaultBundles) ;    return;
+                    
+                    %                 case 'm'
+                    %                     helpCADDOM(2) ;          return;
                 case 'c'
                     fprintf('printing cylinder models for Chimera.\n')
                     file_name='CylinderModel' ;   Radius =1;
                     fileID = fopen([pwd filesep file_name '.bild'],'w');
                     for Bi = 1:size(patchH ,2)
                         fprintf(fileID ,'\n' );
-                        fprintf(fileID ,'.transparency 0.5\n' );
+                        %                         fprintf(fileID ,'.transparency 0.5\n' );
                         fprintf(fileID ,'.comment (If need colors for bundle %i) .color  r g b\n',Bi );
                         for Cj= 1:length(patchH{2,Bi})
                             XYZ= [patchH{2,Bi}(Cj).XData ;patchH{2,Bi}(Cj).YData ;patchH{2,Bi}(Cj).ZData] ;
@@ -6342,86 +7191,92 @@ classdef hyperbundle <handle
                     else
                         fprintf('No transform command history or have all used up Undos \n' );
                     end
+                    
+                case 'i'
+                    ss_Assembly= findobj(gcf,'Tag','ss_Assembly') ;
+                    ReOrderBundles(obj,ss_Assembly )
+                    
+                    
                     %                 ThisCommand =AssemblyCommand(checkH.Value, checkH2_GL.Value, RotaionIncrement, evn.Character )   ;
-%                 case 'z'
-%                     ggtab =gctab  ; %
-%                     ss_json=findall(gcf,'Tag','ss_json') ;
-%                     if isequal(ggtab,ss_json)             % curent tab on cadnano
-%                         sH=findobj(ss_json,'Tag','sH') ;
-%                         if ~isempty(sH)   % have initial the routing
-%                             if isfield(sH.UserData,'ScafBCB') % have create red dot in cadnano tab
-%                                 if sH.UserData.SFC(sH.UserData.ind,1)==sH.UserData.SFC(sH.UserData.ind-1,1)  % select (kth,k+1) base, avoid routing on single base 
-%                                 XY2d= [ sH.XData( sH.UserData.ind) , sH.YData( sH.UserData.ind) ] ;
-%                                 
-%                                 sH.UserData.Highlight.XData(2)=XY2d(1) ;
-%                                 sH.UserData.Highlight.YData(2)=XY2d(2) ;
-%                                 sH.UserData.Highlight.CData(1:2,1:3) =[1,0,0 ;  0 , 1 , 0.3];
-%                                 sH.UserData.ScafBCBz=  sH.UserData.ScafBCB ;
-%                                 %                                 sH.UserData
-%                                 %                                 fprintf(' key z \n')
-%                                 else
-%                                   f = msgbox('Not valid base.');  
-%                                 end
-%                             end
-%                         end
-%                     end
-%                 case 'x'
-%                     ggtab =gctab  ; %
-%                     ss_json=findall(gcf,'Tag','ss_json') ;
-%                     if isequal(ggtab,ss_json)             % curent tab on cadnano
-%                         sH=findobj(ss_json,'Tag','sH') ;
-%                         if ~isempty(sH)   % have initial the routing
-%                             if isfield(sH.UserData,'ScafBCB') % have create red dot in cadnano tab
-%                                 if sH.UserData.SFC(sH.UserData.ind,1)==sH.UserData.SFC(sH.UserData.ind-1,1)  % select (kth,k+1) base, avoid routing on single base                                   
-%                                     XY2d= [ sH.XData( sH.UserData.ind) , sH.YData( sH.UserData.ind) ] ;
-%                                     if length(sH.UserData.Highlight.XData) ~= 1 % make sure use z key before x key
-%                                         sH.UserData.Highlight.XData(3)=XY2d(1) ;
-%                                         sH.UserData.Highlight.YData(3)=XY2d(2) ;
-%                                         sH.UserData.Highlight.CData =[1,0,0;  0 , 1 , 0.3 ;  0 , 1 , 0.8];
-%                                         sH.UserData.ScafBCBx=  sH.UserData.ScafBCB ;
-%                                     end
-%                                 else                                    f = msgbox('Not valid base.');
-%                                     
-%                                 end
-%                                 %                                 fprintf(' key x \n')
-%                             end
-%                         end
-%                     end
-%                 case 'v'
-%                     ggtab =gctab  ; %
-%                     ss_json=findall(gcf,'Tag','ss_json') ;
-%                     
-%                     if isequal(ggtab,ss_json)             % curent tab on cadnano
-%                         sH=findobj(ss_json,'Tag','sH') ;
-%                         if ~isempty(sH)   % have initial the routing
-%                             if isfield(sH.UserData,'ScafBCB') % have create red dot in cadnano tab
-%                                 XY2d= [ sH.XData( sH.UserData.ind) , sH.YData( sH.UserData.ind) ] ;
-%                                 if length(sH.UserData.Highlight.XData) == 3 % make sure have used 'z' and 'x'
-%                                     if ~isfield(sH.UserData,'ExtraForcedScafXover')
-%                                         axJson2D=findobj(gcf,'Tag','json2D') ; axes(axJson2D) ;
-% 
-%                                         MM =[sH.UserData.ScafBCBz ;  sH.UserData.ScafBCBx  ] ;
-%                                         MM= [ MM(2,4:6), MM(1,1:3) ; MM(1,4:6), MM(2,1:3) ];
-% %                                                     MM= [ MM(1,1:3), MM(2,4:6) ; MM(2,1:3), MM(1,4:6) ];
-%                                         sH.UserData.ExtraForcedScafXover = MM ;
-%                                     else
-%                                         axJson2D=findobj(gcf,'Tag','json2D') ; axes(axJson2D) ;
-%                                         MM =[sH.UserData.ScafBCBz ;  sH.UserData.ScafBCBx  ] ;
-%                                         MM= [ MM(2,4:6), MM(1,1:3) ; MM(1,4:6), MM(2,1:3) ];
-% %                                                     MM= [ MM(1,1:3), MM(2,4:6) ; MM(2,1:3), MM(1,4:6) ];
-%                                         sH.UserData.ExtraForcedScafXover = [sH.UserData.ExtraForcedScafXover ; MM] ;
-%                                     end
-%                                     plot(sH.UserData.Highlight.XData(2:3),sH.UserData.Highlight.YData(2:3),'-o','Color','k' ,'MarkerFaceColor',ones(1,3)) ;
-%                                     sH.UserData.Highlight.XData=sH.UserData.Highlight.XData(1) ;
-%                                     sH.UserData.Highlight.YData=sH.UserData.Highlight.YData(1) ;
-%                                     sH.UserData.Highlight.CData=[1,0 ,0];
-%                                     sH.UserData = rmfield(sH.UserData,'ScafBCBz') ;
-%                                     sH.UserData = rmfield(sH.UserData,'ScafBCBx') ;
-%                                     
-%                                 end
-%                             end
-%                         end
-%                     end
+                    %                 case 'z'
+                    %                     ggtab =gctab  ; %
+                    %                     ss_json=findall(gcf,'Tag','ss_json') ;
+                    %                     if isequal(ggtab,ss_json)             % curent tab on cadnano
+                    %                         sH=findobj(ss_json,'Tag','sH') ;
+                    %                         if ~isempty(sH)   % have initial the routing
+                    %                             if isfield(sH.UserData,'ScafBCB') % have create red dot in cadnano tab
+                    %                                 if sH.UserData.SFC(sH.UserData.ind,1)==sH.UserData.SFC(sH.UserData.ind-1,1)  % select (kth,k+1) base, avoid routing on single base
+                    %                                 XY2d= [ sH.XData( sH.UserData.ind) , sH.YData( sH.UserData.ind) ] ;
+                    %
+                    %                                 sH.UserData.Highlight.XData(2)=XY2d(1) ;
+                    %                                 sH.UserData.Highlight.YData(2)=XY2d(2) ;
+                    %                                 sH.UserData.Highlight.CData(1:2,1:3) =[1,0,0 ;  0 , 1 , 0.3];
+                    %                                 sH.UserData.ScafBCBz=  sH.UserData.ScafBCB ;
+                    %                                 %                                 sH.UserData
+                    %                                 %                                 fprintf(' key z \n')
+                    %                                 else
+                    %                                   f = msgbox('Not valid base.');
+                    %                                 end
+                    %                             end
+                    %                         end
+                    %                     end
+                    %                 case 'x'
+                    %                     ggtab =gctab  ; %
+                    %                     ss_json=findall(gcf,'Tag','ss_json') ;
+                    %                     if isequal(ggtab,ss_json)             % curent tab on cadnano
+                    %                         sH=findobj(ss_json,'Tag','sH') ;
+                    %                         if ~isempty(sH)   % have initial the routing
+                    %                             if isfield(sH.UserData,'ScafBCB') % have create red dot in cadnano tab
+                    %                                 if sH.UserData.SFC(sH.UserData.ind,1)==sH.UserData.SFC(sH.UserData.ind-1,1)  % select (kth,k+1) base, avoid routing on single base
+                    %                                     XY2d= [ sH.XData( sH.UserData.ind) , sH.YData( sH.UserData.ind) ] ;
+                    %                                     if length(sH.UserData.Highlight.XData) ~= 1 % make sure use z key before x key
+                    %                                         sH.UserData.Highlight.XData(3)=XY2d(1) ;
+                    %                                         sH.UserData.Highlight.YData(3)=XY2d(2) ;
+                    %                                         sH.UserData.Highlight.CData =[1,0,0;  0 , 1 , 0.3 ;  0 , 1 , 0.8];
+                    %                                         sH.UserData.ScafBCBx=  sH.UserData.ScafBCB ;
+                    %                                     end
+                    %                                 else                                    f = msgbox('Not valid base.');
+                    %
+                    %                                 end
+                    %                                 %                                 fprintf(' key x \n')
+                    %                             end
+                    %                         end
+                    %                     end
+                    %                 case 'v'
+                    %                     ggtab =gctab  ; %
+                    %                     ss_json=findall(gcf,'Tag','ss_json') ;
+                    %
+                    %                     if isequal(ggtab,ss_json)             % curent tab on cadnano
+                    %                         sH=findobj(ss_json,'Tag','sH') ;
+                    %                         if ~isempty(sH)   % have initial the routing
+                    %                             if isfield(sH.UserData,'ScafBCB') % have create red dot in cadnano tab
+                    %                                 XY2d= [ sH.XData( sH.UserData.ind) , sH.YData( sH.UserData.ind) ] ;
+                    %                                 if length(sH.UserData.Highlight.XData) == 3 % make sure have used 'z' and 'x'
+                    %                                     if ~isfield(sH.UserData,'ExtraForcedScafXover')
+                    %                                         axJson2D=findobj(gcf,'Tag','json2D') ; axes(axJson2D) ;
+                    %
+                    %                                         MM =[sH.UserData.ScafBCBz ;  sH.UserData.ScafBCBx  ] ;
+                    %                                         MM= [ MM(2,4:6), MM(1,1:3) ; MM(1,4:6), MM(2,1:3) ];
+                    % %                                                     MM= [ MM(1,1:3), MM(2,4:6) ; MM(2,1:3), MM(1,4:6) ];
+                    %                                         sH.UserData.ExtraForcedScafXover = MM ;
+                    %                                     else
+                    %                                         axJson2D=findobj(gcf,'Tag','json2D') ; axes(axJson2D) ;
+                    %                                         MM =[sH.UserData.ScafBCBz ;  sH.UserData.ScafBCBx  ] ;
+                    %                                         MM= [ MM(2,4:6), MM(1,1:3) ; MM(1,4:6), MM(2,1:3) ];
+                    % %                                                     MM= [ MM(1,1:3), MM(2,4:6) ; MM(2,1:3), MM(1,4:6) ];
+                    %                                         sH.UserData.ExtraForcedScafXover = [sH.UserData.ExtraForcedScafXover ; MM] ;
+                    %                                     end
+                    %                                     plot(sH.UserData.Highlight.XData(2:3),sH.UserData.Highlight.YData(2:3),'-o','Color','k' ,'MarkerFaceColor',ones(1,3)) ;
+                    %                                     sH.UserData.Highlight.XData=sH.UserData.Highlight.XData(1) ;
+                    %                                     sH.UserData.Highlight.YData=sH.UserData.Highlight.YData(1) ;
+                    %                                     sH.UserData.Highlight.CData=[1,0 ,0];
+                    %                                     sH.UserData = rmfield(sH.UserData,'ScafBCBz') ;
+                    %                                     sH.UserData = rmfield(sH.UserData,'ScafBCBx') ;
+                    %
+                    %                                 end
+                    %                             end
+                    %                         end
+                    %                     end
                     
             end
             %             gctab
@@ -6533,7 +7388,7 @@ classdef hyperbundle <handle
                         if  checkH2_GL.Value ==0
                             RMat=[1 0 0; 0 cos(theta) -sin(theta); 0 sin(theta) cos(theta)];
                         else
-                            LocalAxis= -obj.containBundle{iBundle(1)}.TransformMatrix2(1:3, 1) ;
+                            LocalAxis= obj.containBundle{iBundle(1)}.TransformMatrix2(1:3, 1) ;
                             RMat = RotationAxisToRotaionMatrix( LocalAxis,theta*180/pi )     ;
                         end
                         OriP1=OriP1 - ones(size(OriP1,1),1)*Gcenter ;  PlotXYZV2=PlotXYZV2 - ones(size(PlotXYZV2,1),1)*Gcenter ;
@@ -6543,7 +7398,7 @@ classdef hyperbundle <handle
                         if  checkH2_GL.Value ==0
                             RMat=[1 0 0; 0 cos(theta) sin(theta); 0 -sin(theta) cos(theta)];
                         else
-                            LocalAxis= obj.containBundle{iBundle(1)}.TransformMatrix2(1:3, 1) ;
+                            LocalAxis= -obj.containBundle{iBundle(1)}.TransformMatrix2(1:3, 1) ;
                             RMat = RotationAxisToRotaionMatrix( LocalAxis,theta*180/pi )     ;
                         end
                         OriP1=OriP1 - ones(size(OriP1,1),1)*Gcenter ;  PlotXYZV2=PlotXYZV2 - ones(size(PlotXYZV2,1),1)*Gcenter ;
@@ -6553,7 +7408,7 @@ classdef hyperbundle <handle
                         if  checkH2_GL.Value ==0
                             RMat=[cos(theta) 0 sin(theta); 0 1 0; -sin(theta) 0 cos(theta)];
                         else
-                            LocalAxis= -obj.containBundle{iBundle(1)}.TransformMatrix2(1:3, 2) ;
+                            LocalAxis= obj.containBundle{iBundle(1)}.TransformMatrix2(1:3, 2) ;
                             RMat = RotationAxisToRotaionMatrix( LocalAxis,theta*180/pi )     ;
                         end
                         
@@ -6564,7 +7419,7 @@ classdef hyperbundle <handle
                         if  checkH2_GL.Value ==0
                             RMat=[cos(theta) 0 -sin(theta); 0 1 0; sin(theta) 0 cos(theta)];
                         else
-                            LocalAxis= obj.containBundle{iBundle(1)}.TransformMatrix2(1:3, 2) ;
+                            LocalAxis= -obj.containBundle{iBundle(1)}.TransformMatrix2(1:3, 2) ;
                             RMat = RotationAxisToRotaionMatrix( LocalAxis,theta*180/pi )     ;
                         end
                         OriP1=OriP1 - ones(size(OriP1,1),1)*Gcenter ;  PlotXYZV2=PlotXYZV2 - ones(size(PlotXYZV2,1),1)*Gcenter ;
@@ -6574,7 +7429,7 @@ classdef hyperbundle <handle
                         if checkH2_GL.Value ==0
                             RMat=[cos(theta) -sin(theta) 0; sin(theta)  cos(theta)  0; 0 0 1];
                         else
-                            LocalAxis= -obj.containBundle{iBundle(1)}.TransformMatrix2(1:3, 3) ;
+                            LocalAxis= obj.containBundle{iBundle(1)}.TransformMatrix2(1:3, 3) ;
                             RMat = RotationAxisToRotaionMatrix( LocalAxis,theta*180/pi )     ;
                         end
                         
@@ -6585,7 +7440,7 @@ classdef hyperbundle <handle
                         if checkH2_GL.Value ==0
                             RMat=[cos(theta) sin(theta) 0; -sin(theta)  cos(theta)  0; 0 0 1];
                         else
-                            LocalAxis= obj.containBundle{iBundle(1)}.TransformMatrix2(1:3, 3) ;
+                            LocalAxis= -obj.containBundle{iBundle(1)}.TransformMatrix2(1:3, 3) ;
                             RMat = RotationAxisToRotaionMatrix( LocalAxis,theta*180/pi )     ;
                         end
                         OriP1=OriP1 - ones(size(OriP1,1),1)*Gcenter ;  PlotXYZV2=PlotXYZV2 - ones(size(PlotXYZV2,1),1)*Gcenter ;
@@ -6668,7 +7523,7 @@ classdef hyperbundle <handle
         %
         
         
-        function  plotXYZ=plotScafR_BaseByBase(obj,ScafForScatter)
+        function  plotXYZ2=plotScafR_BaseByBase(obj,ScafForScatter)
             
             %             AllGXYZ=cell(1,length(obj.containBundle));
             %             for k=1:length(obj.containBundle)
@@ -6691,40 +7546,96 @@ classdef hyperbundle <handle
             %             end
             %
             %             tic
-            plotXYZ=zeros(size(ScafForScatter,1) ,3);  % C5
-            for k=1:size(ScafForScatter,1)
-                ColRow =  obj.RelateTable(obj.RelateTable(:,5)==ScafForScatter(k,1),6:7);  ColRow=ColRow(1,:) ;
-                indB =find(obj.RelateTable(:,5)==ScafForScatter(k,1)) ; indB=indB(1) ;
-                bundle= obj.RelateTable(indB,1) ;
+            %             tic
+            %             plotXYZ=zeros(size(ScafForScatter,1) ,3);  % C5   % old way
+            %             query base by base , not efficient 08/26/2019
+            %             for k=1:size(ScafForScatter,1)
+            %                 ColRow =  obj.RelateTable(obj.RelateTable(:,5)==ScafForScatter(k,1),6:7);  ColRow=ColRow(1,:) ;
+            %                 indB =find(obj.RelateTable(:,5)==ScafForScatter(k,1)) ; indB=indB(1) ;
+            %                 bundle= obj.RelateTable(indB,1) ;
+            %                 Bundle= obj.containBundle{bundle };
+            %                 if mod(obj.RelateTable(indB,4) ,2) ==0
+            %                     SimilarDirCylders = and( mod(obj.RelateTable(:,4) ,2)==0 , obj.RelateTable(:,1)==bundle) ;
+            %                 else
+            %                     SimilarDirCylders = and( mod(obj.RelateTable(:,4) ,2)==1 , obj.RelateTable(:,1)==bundle) ;
+            %                 end
+            %                 fSimilarDirCylders = find(SimilarDirCylders) ; fSimilarDirCylders=fSimilarDirCylders(1) ;
+            %                 ThefSimilarDirCylder= obj.RelateTable(fSimilarDirCylders,2) ;
+            %
+            %                 RefCyl = and(obj.RelateTable(:,1)==bundle, obj.RelateTable(:,2)~=-1  ) ;
+            %                 fRefCyl= find(RefCyl) ;  fRefCyl=fRefCyl(1) ;
+            %                 BasesArr=ScafForScatter(k,2) ;
+            %
+            %                 InplaneXY=Bundle.findExtraCylInplanePosition(  obj.RelateTable, ColRow,fRefCyl)   ;%
+            %                 Global_XYZ=Bundle.HelixRegardlessCylinder(0,1,InplaneXY,BasesArr,ThefSimilarDirCylder) ;
+            %                 plotXYZ(k,:) = Global_XYZ(1:3) ;
+            %
+            %             end
+            %             toc
+            %
+            
+            %-------improve efficiency with vectorize functions, 08/26/2019
+            BCB =ConverC5Routing_BCB(obj,ScafForScatter) ;
+            [~,b] =   ismember( ScafForScatter(:,1) , obj.RelateTable(:,5) ) ;
+            ColRows  =  obj.RelateTable(b,6:7) ;   % vectorized
+            plotXYZ2=zeros(size(ScafForScatter,1) ,3);  % C5
+            for Bi = 1 : max(BCB(:,1))                 % query bundle by bundle, instead of base by base
+%                 Bi
+                BaseIndInThisBundle = BCB(:,1)==Bi ;  ffBaseIndInThisBundle = find(BaseIndInThisBundle);
+                bundle= Bi ;
                 Bundle= obj.containBundle{bundle };
-                if mod(obj.RelateTable(indB,4) ,2) ==0
-                    SimilarDirCylders = and( mod(obj.RelateTable(:,4) ,2)==0 , obj.RelateTable(:,1)==bundle) ;
-                else
-                    SimilarDirCylders = and( mod(obj.RelateTable(:,4) ,2)==1 , obj.RelateTable(:,1)==bundle) ;
-                end
-                fSimilarDirCylders = find(SimilarDirCylders) ; fSimilarDirCylders=fSimilarDirCylders(1) ;
-                ThefSimilarDirCylder= obj.RelateTable(fSimilarDirCylders,2) ;
-                
                 RefCyl = and(obj.RelateTable(:,1)==bundle, obj.RelateTable(:,2)~=-1  ) ;
                 fRefCyl= find(RefCyl) ;  fRefCyl=fRefCyl(1) ;
                 
-                BasesArr=ScafForScatter(k,2) ;
-                InplaneXY=Bundle.findExtraCylInplanePosition(  obj.RelateTable, ColRow,fRefCyl)   ;%
+                InplaneXY=Bundle.findExtraCylInplanePosition(  obj.RelateTable, ColRows(BaseIndInThisBundle,: ),fRefCyl) ;
                 
-                Global_XYZ=Bundle.HelixRegardlessCylinder(0,1,InplaneXY,BasesArr,ThefSimilarDirCylder) ;
-                plotXYZ(k,:) = Global_XYZ(1:3) ;
+                [~,bCR] =   ismember(  ColRows(BaseIndInThisBundle,: ) , obj.RelateTable(:,6:7) ,'rows' ) ;
+                EvenOrOldCylinder  =  obj.RelateTable(bCR,4) ;   % vectorized
+                EvenOrOldCylinder= mod(EvenOrOldCylinder,2)==0 ;
                 
-                %                 if ScafForScatter(k,1)==37
-                % %                     sdsf=3
+                ThefSimilarDirCylder_A= unique( obj.RelateTable(bCR(EvenOrOldCylinder) ,2)')  ; % query Agroup and BGroup
+                %
+                %                 if isempty(ThefSimilarDirCylder_A)
+                %                 sdsf=3
                 %                 end
+                if ~isempty(ThefSimilarDirCylder_A)
+                    ThefSimilarDirCylder_A=ThefSimilarDirCylder_A(1) ;
+                else
+                    ThefSimilarDirCylder_A=Bundle.AGroup(1) ;
+                end
+                ThefSimilarDirCylder_B= unique( obj.RelateTable(bCR(~EvenOrOldCylinder) ,2)') ;
+                if ~isempty(ThefSimilarDirCylder_B)
+                    ThefSimilarDirCylder_B=ThefSimilarDirCylder_B(1) ;
+                else
+                    ThefSimilarDirCylder_B=Bundle.BGroup(1) ;
+                end
+                BCB_inthisBundle = BCB(BaseIndInThisBundle,3) ;
                 
+                Global_XYZ_A=Bundle.HelixRegardlessCylinder(0,1,InplaneXY(EvenOrOldCylinder,:), BCB_inthisBundle(EvenOrOldCylinder), ThefSimilarDirCylder_A) ;
+                Global_XYZ_B=Bundle.HelixRegardlessCylinder(0,1,InplaneXY(~EvenOrOldCylinder,:),  BCB_inthisBundle(~EvenOrOldCylinder), ThefSimilarDirCylder_B) ;
+                
+                plotXYZ2(ffBaseIndInThisBundle(EvenOrOldCylinder) ,:) = Global_XYZ_A(:, 1:3) ;
+                plotXYZ2(ffBaseIndInThisBundle(~EvenOrOldCylinder) ,:) = Global_XYZ_B(:, 1:3) ;
+                
+                %                 figure; scatter3(Global_XYZ_A(:,1),Global_XYZ_A(:,2),Global_XYZ_A(:,3)); hold on ; scatter3(Global_XYZ_B(:,1),Global_XYZ_B(:,2),Global_XYZ_B(:,3));
             end
-            %             toc
-            %             dsfsf=3
+            %                         toc
+            %                         dsfsf=3;
         end
-        function surfH=plotScafR_cylindermodelAllBase(obj,whichScaf)
+        
+        
+        function BCB =ConverC5Routing_BCB(obj,C5Routing)
+            
+            BCB=zeros( size(C5Routing,1) ,3) ;
+            BCB(:, end) =     C5Routing(:, end)  ;
+            [~,b] =   ismember( C5Routing(:,1) , obj.RelateTable(:,5) ) ;
+            BC =   obj.RelateTable(b,1:2) ;
+            BCB(:, 1:2) = BC ;
+        end
+        
+        function surfH=plotScafR_cylindermodelAllBase(obj,whichScafSource, scafInd )
             if nargin==1
-                whichScaf=1;
+                whichScafSource=1;
             end
             AllGXYZ=cell(1,length(obj.containBundle));
             for k=1:length(obj.containBundle)
@@ -6742,18 +7653,18 @@ classdef hyperbundle <handle
                 QQWithPM10Bases =obj.containBundle{Bundlei}.HelixXYZGBVec;
                 SaveGHelixBVec{Bundlei}= QQWithPM10Bases;
             end
-            if whichScaf==1
-                SacfR=obj.ScafRouting ;
-            elseif  whichScaf==2
+            if whichScafSource==1
+                SacfR=obj.ScafRouting{scafInd} ;
+            elseif  whichScafSource==2
                 SacfR=obj.Scaf_fromCadDOM ;
-            elseif whichScaf==3
+            elseif whichScafSource==3
                 SacfR=obj.Scaf_fromJSON ;
             end
             SacfR = interpolateBase_ThreeCol( SacfR ) ;   % BCB notation
-
-
-            [ScafForScatter, ia]= setdiff(interpolateBase( obj.scafC5 ) , obj.skipBase,'rows' ,'stable') ;  %C5 notation
-             %  consider skip in SQ
+            
+            
+            [ScafForScatter, ia]= setdiff(interpolateBase( obj.scafC5{scafInd} ) , obj.skipBase,'rows' ,'stable') ;  %C5 notation
+            %  consider skip in SQ
             SacfR=SacfR(ia,:) ;
             %             SacfR=ScafForScatter ;
             plotXYZ=zeros(size(SacfR));
@@ -6773,7 +7684,8 @@ classdef hyperbundle <handle
             x = plotXYZ(:,1)';
             y = plotXYZ(:,2)';
             z = plotXYZ(:,3)';
-            col = (1:size(plotXYZ,1))*1000;  % This is the color
+            %             col = (1:size(plotXYZ,1))*1000;  % This is the color
+            col = ((1:size(plotXYZ,1))-1)/( size(plotXYZ,1)-1);  % This is the color
             surfH=surface([x;x],[y;y],[z;z],[col;col], 'facecol','no', 'edgecol','interp', 'linew',2);
             
             %     DSh=plot3(XYZdata(:,1),-XYZdata(:,2),XYZdata(:,3),'Linewidth',2);   %draw route
@@ -6781,7 +7693,7 @@ classdef hyperbundle <handle
             scatter3(plotXYZ(end,1),plotXYZ(end,2),plotXYZ(end,3),'d','filled','SizeData',100);  %mark tail
             axis equal;grid on;  xlabel('X-axis') ;ylabel('Y-axis');zlabel('Z-axis') ;
             surfH.UserData.SacfR=SacfR ;
-        end % end of plotScafR_cylindermodelAllBase    
+        end % end of plotScafR_cylindermodelAllBase
         
         function surfH=plotScafR_cylindermodel(obj,whichScaf)
             if nargin==1
@@ -6809,6 +7721,8 @@ classdef hyperbundle <handle
                 SacfR=obj.Scaf_fromCadDOM ;
             elseif whichScaf==3
                 SacfR=obj.Scaf_fromJSON ;
+            elseif whichScaf==4
+                SacfR=obj.ScafRouting ;
             end
             %             SacfR=ScafForScatter ;
             plotXYZ=zeros(size(SacfR));
@@ -6838,6 +7752,93 @@ classdef hyperbundle <handle
             surfH.UserData.SacfR=SacfR ;
         end % end of plotScafR_cylindermodel
         
+        function surfH=plotScafR_cylindermodelMulti(obj,whichScaf, GradOrIsoColor)
+            if nargin==1
+                whichScaf=1;
+                GradOrIsoColor='Gradient' ;
+            end
+            AllGXYZ=cell(1,length(obj.containBundle));
+            for k=1:length(obj.containBundle)
+                AllGXYZ{k}=obj.containBundle{k}.CylinderXYZGlobal ;
+            end
+            
+            SaveGHelix=cell(1,length(obj.containBundle));
+            for Bundlei=1:length(obj.containBundle)
+                QQWithPM10Bases =obj.containBundle{Bundlei}.HelixXYZG;
+                SaveGHelix{Bundlei}= QQWithPM10Bases;
+            end
+            
+            SaveGHelixBVec=cell(1,length(obj.containBundle)); %in old, before-simul coordinate
+            for Bundlei=1:length(obj.containBundle)
+                QQWithPM10Bases =obj.containBundle{Bundlei}.HelixXYZGBVec;
+                SaveGHelixBVec{Bundlei}= QQWithPM10Bases;
+            end
+            if whichScaf==1
+                SacfC=obj.ScafRouting ;
+            elseif  whichScaf==2
+                SacfC=obj.Scaf_fromCadDOM ;
+            elseif whichScaf==3
+                SacfC=obj.Scaf_fromJSON ;
+            elseif whichScaf==4
+                SacfC=obj.ScafRouting ;
+            end
+            %             SacfR=ScafForScatter ;
+            CC= get(gca,'defaultAxesColorOrder') ; QCC=CC(4,:) ; 
+            %             TempCC = [ 1,0,0  ; 0 ,1,0 ; 0,0 1 ; 1, 0.5,0 ;  0,1,1; 1,0 ,1];
+            CC(2,:)=[ 0.7500  0  0.7500] ;CC(3,:)=[]; CC(3,:)=[];  
+            CC(1,:)= [0.3010    0.7450    0.9330];         CC(3,:)=[0    0.5000         0];CC;
+            CC=[CC;QCC];CC(4,:)=[];
+            set(gca,'ColorOrder',CC) ;
+            %             set(0,'defaultAxesColorOrder',TempCC*0.95) ;
+            SaveXYZ= zeros( length(SacfC) ,6 ) ;
+            cla ;hold on;
+            for kc= 1 :length(SacfC)
+                SacfR= SacfC{kc} ;
+                plotXYZ=zeros(size(SacfR));
+                for k=1:size(SacfR,1)
+                    bundle=SacfR(k,1);  Cyl=SacfR(k,2);
+                    alpha=SacfR(k,3)- obj.containBundle{bundle}.Zbase1(Cyl);
+                    
+                    beta=obj.containBundle{bundle}.Zbase2(Cyl)-SacfR(k,3);
+                    P= AllGXYZ{bundle}(Cyl,1:3);
+                    Q=AllGXYZ{bundle}(Cyl,4:6);
+                    XYZ=(beta*P + alpha*Q )/(alpha+beta);
+                    plotXYZ(k,:)=XYZ;
+                end
+                
+                % SSplotXYZ=size(plotXYZ) ;
+                % plot3(plotXYZ(:,1), plotXYZ(:,2), plotXYZ(:,3) )
+                x = plotXYZ(:,1)';
+                y = plotXYZ(:,2)';
+                z = plotXYZ(:,3)';
+                col = ((1:size(plotXYZ,1))-1)/( size(plotXYZ,1)-1);  % This is the color
+                %              col = (1:size(plotXYZ,1))*1000;  % This is the color
+                %             ssdfsf=3 ;
+                % 'Gradient','IsoColor'
+                switch GradOrIsoColor
+                    case 'Gradient'
+                        surfH=surface([x;x],[y;y],[z;z],[col;col], 'facecol','no', 'edgecol','interp', 'linew',2);
+                    case 'IsoColor'
+                        surfH=plot3(x,y,z ,'LineWidth',2);
+                        %                         surfH.Color = [surfH.Color ,0.7];
+                end
+                %                 ax = gca;
+                % ax.ColorOrderIndex = 2;
+                SaveXYZ(kc,:) = [plotXYZ(1,:),plotXYZ(end,:)] ;
+                %     DSh=plot3(XYZdata(:,1),-XYZdata(:,2),XYZdata(:,3),'Linewidth',2);   %draw route
+                %                 scatter3(plotXYZ(1,1),plotXYZ(1,2),plotXYZ(1,3),'sr','filled','SizeData',100);   %mark head
+                %                 scatter3(plotXYZ(end,1),plotXYZ(end,2),plotXYZ(end,3),'db','filled','SizeData',100);  %mark tail
+            end
+            scatter3(SaveXYZ(:,1),SaveXYZ(:,2),SaveXYZ(:,3),'sr','filled','SizeData',100);   %mark head
+            scatter3(SaveXYZ(:,4),SaveXYZ(:,5),SaveXYZ(:,6),'db','filled','SizeData',100);  %mark tail
+            
+            
+            %             set(0, 'DefaultAxesColorOrder', 'factory');
+            axis equal;grid on;  xlabel('X-axis') ;ylabel('Y-axis');zlabel('Z-axis') ;
+            title( sprintf(' # of scaffold = %i ',kc ))
+            surfH.UserData.SacfR=SacfR ;
+        end % end of plotScafR_cylindermodelMulti
+        
         function obj=ApartStaplesSimple(obj, varargin)
             %                         skipBase= GetHyperB.skipBase ;
             %             if strcmp(obj.StapOption.halfXover,'yes')  && strcmp(obj.StapOption.type,'straightcut')
@@ -6859,13 +7860,13 @@ classdef hyperbundle <handle
             
             
             StapleCell;
-            NewStapleCell =cell(300,1) ; iC=1;
+            NewStapleCell =cell(1000,1) ; iC=1;
             
             for k=1: length(StapleCell)
-                Bound=[30,60];  mB =45;
+                Bound=[35,60];  mB =50;
                 BaseRout = setdiff( interpolateBase( StapleCell{k} ) , obj.skipBase ,'rows','stable') ;
                 %                 [WW,AlwaysNotCut]=intersect( BaseRout, StapleCell{k},'rows' ) ;
-                [WW2,AlwaysNotCut]=intersect( BaseRout, [StapleCell{k};obj.scafC5],'rows' ) ;
+                [WW2,AlwaysNotCut]=intersect( BaseRout, [StapleCell{k}; obj.scafC5All ],'rows' ) ;
                 
                 AlwaysNotCut= repmat(AlwaysNotCut, 1 , 5) + repmat(-2:1:2 ,   size(AlwaysNotCut,1) ,1) ;  % nicks and thier neighbors
                 %-------- +-2nt from xover is the limit, since
@@ -6904,7 +7905,7 @@ classdef hyperbundle <handle
                         end
                         nw=nw+1 ;
                         if nw==1000*3
-                            Bound=[20,60];   mB=40;
+                            Bound=[25,60];   mB=35;
                             fprintf('Cutting loops up to half. Loose Criterion. \n')
                             %                             StapleCell{k}
                         end
@@ -7380,6 +8381,8 @@ classdef hyperbundle <handle
                 else
                     root= [obj.RelateTable(C3Cylinder,5) ,comefrom(4) ] ;  Dir =  Info{k,6}-1 ;
                 end
+                if Info{k,6}==0 ; Dir=0;end   % for single extension
+                
                 DecidePrims(2*k-1,:) =[root ,Dir ] ;
                 %  ------------
                 comefrom =  str2num(InfoHide{k,4} ) ;   %                C3Cylinder =
@@ -7389,6 +8392,7 @@ classdef hyperbundle <handle
                 else
                     root= [obj.RelateTable(C3Cylinder,5) ,comefrom(4) ] ; Dir = Info{k,7}-1 ;
                 end
+                if Info{k,7}==0 ; Dir=0;end % for single extension
                 DecidePrims(2*k,:) =[root , Dir ] ;
             end
             count=0;
@@ -7415,7 +8419,11 @@ classdef hyperbundle <handle
                     TargetC5=AppRT(TargetC5ind,5);
                     [~,qqind] =ismember(   stpR(1,:), DecidePrims(:,1:2) , 'rows') ;
                     TargetRCylandDecidePrims(qqind,1)=TargetC5 ;
-                    NewR = [[TargetC5, stpR(1,2)+DecidePrims(whichOverhangs,3)];[TargetC5, stpR(1,2)];stpR    ];
+                    if DecidePrims(whichOverhangs,3)~=0
+                        NewR = [[TargetC5, stpR(1,2)+DecidePrims(whichOverhangs,3)];[TargetC5, stpR(1,2)];stpR    ];
+                    else % single extension
+                        NewR=   stpR;
+                    end
                     obj.StapList3{stpi}= NewR;
                     ExtendScaf(2*nn-1:2*nn, : ) =[[TargetC5, stpR(1,2)];[TargetC5, stpR(1,2)+DecidePrims(whichOverhangs,3)]   ] ;
                     nn=nn+1 ;
@@ -7438,7 +8446,11 @@ classdef hyperbundle <handle
                     TargetC5=AppRT(TargetC5ind,5);
                     [~,qqind] =ismember(    stpR(end,:), DecidePrims(:,1:2) , 'rows');
                     TargetRCylandDecidePrims(qqind,1)=TargetC5 ;
-                    NewR = [stpR ; [TargetC5, stpR(end,2)] ; [TargetC5, stpR(end,2)+DecidePrims(whichOverhangs,3)]];
+                    if DecidePrims(whichOverhangs,3)~=0
+                        NewR = [stpR ; [TargetC5, stpR(end,2)] ; [TargetC5, stpR(end,2)+DecidePrims(whichOverhangs,3)]];
+                    else   % single extension
+                        NewR = stpR ;
+                    end
                     obj.StapList3{stpi}= NewR;
                     ExtendScaf(2*nn-1:2*nn, : ) =[[TargetC5, stpR(end,2)+DecidePrims(whichOverhangs,3)];[TargetC5, stpR(end,2)]   ] ;
                     nn=nn+1 ;
@@ -7478,6 +8490,7 @@ classdef hyperbundle <handle
             ForEasy =TargetRCylandDecidePrims ;
             ConnScaf2= cell(size(Info ,1),1) ;
             for k= 1:size(Info ,1)
+%                 k
                 %                 switch Info{k,8}
                 %                     case 'r_r'
                 %                          MM =  [ForEasy(2*k-1:2*k ,1 ) , ForEasy(2*k-1:2*k ,3 )];
@@ -7503,17 +8516,25 @@ classdef hyperbundle <handle
                 end
                 MM=flip(MM) ;   % first row 5' end , second row 3' end ,otherwise cadnano not show
                 %                 k
-                FirstRow= obj.ScafdigitSQ{MM(1,1)}(MM(1,2),:);
-                Inds=find(FirstRow==-1) ;
-                FirstRow(Inds(1)) = MM(2,1) ;   FirstRow(Inds(2)) = MM(2,2) ;
-                obj.ScafdigitSQ{MM(1,1)}(MM(1,2),:)=FirstRow ;
-                obj.ScafdigitHC{MM(1,1)}(MM(1,2),:)=FirstRow ;
+                if MM(1,1)~=-1
+                    FirstRow= obj.ScafdigitSQ{MM(1,1)}(MM(1,2),:);
+                    Inds=find(FirstRow==-1) ;
+                    FirstRow(Inds(1)) = MM(2,1) ;   FirstRow(Inds(2)) = MM(2,2) ;
+                    obj.ScafdigitSQ{MM(1,1)}(MM(1,2),:)=FirstRow ;
+                    obj.ScafdigitHC{MM(1,1)}(MM(1,2),:)=FirstRow ;
+                end
                 
-                SecondRow= obj.ScafdigitSQ{MM(2,1)}(MM(2,2),:);
-                Inds2=find(SecondRow==-1) ;
-                SecondRow(Inds2(1)) = MM(1,1) ;   SecondRow(Inds2(2)) = MM(1,2) ;
-                obj.ScafdigitSQ{MM(2,1)}(MM(2,2),:)= SecondRow ;
-                obj.ScafdigitHC{MM(2,1)}(MM(2,2),:)= SecondRow ;
+%                 if k==14
+%                     sdsdf=2
+%                 end
+                
+                if MM(2,1)~= -1
+                    SecondRow= obj.ScafdigitSQ{MM(2,1)}(MM(2,2),:) ;
+                    Inds2=find(SecondRow==-1)  ;
+                    SecondRow(Inds2(1)) = MM(1,1) ;   SecondRow(Inds2(2)) = MM(1,2) ;
+                    obj.ScafdigitSQ{MM(2,1)}(MM(2,2),:)= SecondRow ;
+                    obj.ScafdigitHC{MM(2,1)}(MM(2,2),:)= SecondRow ;
+                end
                 
                 ConnScaf2{k} =MM ;
                 %                 MM
@@ -7551,7 +8572,7 @@ classdef hyperbundle <handle
             nCylOri= size(obj.RelateTableOrr,1) ;
             AppRT = zeros(length(Nick),6) ;
             for k=1:length(Nick)
-
+                
                 comefrom =  str2num(Nick{k} ) ;
                 SourceXY=  obj.RelateTableOrr( ConvertC3(2*k-1,1) ,6:7) ;
                 PotentialXY = [SourceXY+[1,0] ;SourceXY+[-1,0] ; SourceXY+[0,1] ;SourceXY+[0,-1]] ;   %
@@ -7574,13 +8595,13 @@ classdef hyperbundle <handle
                     d=  PotentialXY - ones(size( PotentialXY,1),1)* TargetXY ;    d=d(:,1).^2 +d(:,2).^2 ;
                     Select = find(d==min(d)) ;
                     PotentialXY=PotentialXY( Select,:) ;
-                end                
+                end
                 AddRow= [comefrom PotentialXY] ;
                 AppRT(k,:)=AddRow ;
             end
             AppRT=union(AppRT,AppRT,'rows','stable') ;  % user given overhangs to new cylinder
             OverhangToNewCylinder = AppRT;   % user given overhangs to new cylinder
-           
+            
             AppRT=AppRT(:,[1,5:6]) ;[AppRT,ia,ib]=union(AppRT,AppRT,'rows','stable') ;
             cut=AppRT(:,1) ;  AppRT=AppRT(:,2:3) ;
             AppRT=[ -1*ones(size(AppRT)) , AppRT] ;
@@ -7625,10 +8646,10 @@ classdef hyperbundle <handle
             TargetRCylandDecidePrims=[-1*ones(size(DecidePrims,1),1) , DecidePrims ] ;
             % later used for linking pseudo scaffold section
             for stpi= 1:length( obj.StapList3)
-                stpR= obj.StapList3{stpi} ;  
-                OverHangCyl = ismember(stpR(:,1),AppRT(:,5) ) ; 
+                stpR= obj.StapList3{stpi} ;
+                OverHangCyl = ismember(stpR(:,1),AppRT(:,5) ) ;
                 stpR=stpR(~OverHangCyl , :)  ;  % ignore overhange section
-
+                
                 if ismember(   stpR(1,:), DecidePrims(:,1:2) , 'rows')
                     [~, whichOverhangs] =   ismember(   stpR(1,:), DecidePrims(:,1:2) , 'rows') ;
                     %                     RootXY=obj.RelateTable( DecidePrims(whichOverhangs,1),6:7) ;% will have error for discontinuous cylinders
@@ -7645,7 +8666,7 @@ classdef hyperbundle <handle
                     [~,qqind] =ismember(   stpR(1,:), DecidePrims(:,1:2) , 'rows') ;
                     TargetRCylandDecidePrims(qqind,1)=TargetC5 ;
                     NewR = [[TargetC5, stpR(1,2)+DecidePrims(whichOverhangs,3)];[TargetC5, stpR(1,2)];stpR    ];
-%                     obj.StapList3{stpi}= NewR;
+                    %                     obj.StapList3{stpi}= NewR;
                     ExtendScaf(2*nn-1:2*nn, : ) =[[TargetC5, stpR(1,2)];[TargetC5, stpR(1,2)+DecidePrims(whichOverhangs,3)]   ] ;
                     nn=nn+1 ;
                 end
@@ -7670,13 +8691,13 @@ classdef hyperbundle <handle
                     [~,qqind] =ismember(    stpR(end,:), DecidePrims(:,1:2) , 'rows');
                     TargetRCylandDecidePrims(qqind,1)=TargetC5 ;
                     NewR = [stpR ; [TargetC5, stpR(end,2)] ; [TargetC5, stpR(end,2)+DecidePrims(whichOverhangs,3)]];
-%                     obj.StapList3{stpi}= NewR;
+                    %                     obj.StapList3{stpi}= NewR;
                     ExtendScaf(2*nn-1:2*nn, : ) =[[TargetC5, stpR(end,2)+DecidePrims(whichOverhangs,3)];[TargetC5, stpR(end,2)]   ] ;
                     nn=nn+1 ;
                 end
             end
             %---------------
-%             obj.RelateTable=[obj.RelateTableOrr ; AppRT] ;  %update RTable
+            %             obj.RelateTable=[obj.RelateTableOrr ; AppRT] ;  %update RTable
             [~,index]=sortrows(obj.RelateTable,5);    %update RVec
             Vec=obj.RelateTable(:,4);
             TTRelateVec=Vec(index);
@@ -7704,7 +8725,7 @@ classdef hyperbundle <handle
             ForEasy =TargetRCylandDecidePrims ;
             ConnScaf2= cell(size(Info ,1),1) ;
             for k= 1:size(Info ,1)
-
+                
                 if strcmp(Info{k,8},'Connected')  &&  ~strcmp(Info{k,2},Info{k,5})
                     MM =  [ForEasy(2*k-1:2*k ,1 ) , ForEasy(2*k-1:2*k ,3 )];
                 elseif  strcmp(Info{k,8},'Free end')  &&  ~strcmp(Info{k,2},Info{k,5})
@@ -7729,13 +8750,13 @@ classdef hyperbundle <handle
                 obj.ScafdigitHC{MM(2,1)}(MM(2,2),:)= SecondRow ;
                 
                 ConnScaf2{k} =MM ;
-
+                
             end
             obj.ClosingStrand.ExtendScaf=ExtendScaf;
             obj.ClosingStrand.ConnScaf2=ConnScaf2;
         end  % end of  LoadJsonRecoverClosingStrand
-
-
+        
+        
         function Lengths=CalculateSegLengths(obj,Ex,Gcut)
             Lengths=zeros(length(find(Gcut>=1))+1,1);
             %                           Lengths=zeros(length(find(Gcut==1))+1,1);

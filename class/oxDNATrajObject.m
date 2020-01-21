@@ -494,8 +494,9 @@ classdef oxDNATrajObject <handle
                 %             cd(obj.PathName);
                 %             load('BM.mat')  ;  % read BelongTransM from previous export
                 Coeff=-0.4;
-                pH=cell(1,length(frame)) ;
+
                 scatterCell= cell(length(frame),1) ;
+              
                 for iF=1:length(frame)
                     %                 if mode==1
                     T=obj.Traj(:,:,frame(iF)) ;
@@ -506,16 +507,23 @@ classdef oxDNATrajObject <handle
                     BackBoneT=  T(:,1:3) +Coeff* T(:,4:6) ;
                     [a0,b0]=hist(obj.Strand,unique(obj.Strand)) ;
                     CC=[iF,0, length(frame)-iF]/ length(frame) ;
-                    
+                    pH=cell(length(frame),1) ;
                     for strandi=1:max(obj.Strand)
                         BaseInd=  find(obj.Strand==strandi) ;
-                        if   a0(strandi)==max(a0)   %scaffold ribbon
-                            plot3(BackBoneT(BaseInd,1)+iF*20  , BackBoneT(BaseInd,2)+iF*0 ,BackBoneT(BaseInd,3) , 'b') ;
-                            
+                        if  a0(strandi)>1000    %scaffold ribbon   CColor =  get(0,'defaultAxesColorOrder') ;   a0(strandi)==max(a0) 
+                           pH{strandi}= plot3(BackBoneT(BaseInd,1)+iF*20  , BackBoneT(BaseInd,2)+iF*0 ,BackBoneT(BaseInd,3) , 'b') ;
+                           pH{strandi}.UserData.RenderAs = 'Scaf' ;  
                         else   %staple
-                            plot3(BackBoneT(BaseInd,1)+iF*20 , BackBoneT(BaseInd,2)+iF*0 ,BackBoneT(BaseInd,3),'r'  ) ;
+                           pH{strandi}=   plot3(BackBoneT(BaseInd,1)+iF*20 , BackBoneT(BaseInd,2)+iF*0 ,BackBoneT(BaseInd,3),'r'  ) ;
+                           pH{strandi}.UserData.RenderAs = 'Stap' ;
                         end
+                        pH{strandi}.UserData.oxDNAStrandInd = strandi ;
                     end
+                    
+                     for strandi=1:max(obj.Strand)
+                      pH{strandi}.UserData.pH=pH; 
+                     end
+                    
                     %               scatterCell{iF} = scatter3(T(obj.BM==1,1 )+iF*50,T(obj.BM==1,2 ),T(obj.BM==1,3 ),24,'o','filled'   ) ;
                     
                 end
@@ -661,16 +669,19 @@ classdef oxDNATrajObject <handle
                 
                 %             randRGB=rand(1,3)
                 %             randRGB=[1,1,1];
-                
+                 CColor =  get(0,'defaultAxesColorOrder') ;
                 for strandi=1:  max(obj.Strand)
                     BaseInd=  find(obj.Strand==strandi) ;
                     %                     if strandi==2
                     %                         ColorRGB = [1,0,1];
                     %                     end
                     %                     strandi
-                    if     a0(strandi)==max(a0) %    a0(strandi)>1000  % longer than 6000 nts                a0(strandi)==max(a0)   %scaffold ribbon
+%                    CC  get(0,'defaultAxesColorOrder')
+                    if      a0(strandi)>1000 %    a0(strandi)>1000  % longer than 6000 nts                a0(strandi)==max(a0)   %scaffold ribbon
+%                         ColorRGB= CColor( mod(strandi,size(CColor,1))+1  ,:) ;
+%                         scafShow=11
                         ColorRGB=[0.2,0.5,0.8]+0.15*rand(1,3);            %scaffold backbone
-                        %                      ColorRGB=[0.8,0,0] ;
+%                                              ColorRGB=[0.8,0,0] ;
                         %                     ColorRGB= randRGB ;
                         fprintf('Scaffold length = %i \n', max(a0)  ) ;
                         fprintf(fileID , '\n'  )    ;

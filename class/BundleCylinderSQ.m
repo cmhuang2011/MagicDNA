@@ -21,7 +21,7 @@ classdef BundleCylinderSQ < BundleCylinder
        
         function XY=findExtraCylInplanePosition(obj, RTable, qColRow,fRefCyl)
 %             qColRow
-            qColRow=unique(qColRow,'rows','legacy') ;
+%             qColRow=unique(qColRow,'rows','legacy') ;
             ranRefCyl =fRefCyl  ;
             RefXY =  obj.CylInplanePosition(RTable(ranRefCyl,2),:)  ;
 
@@ -39,7 +39,7 @@ classdef BundleCylinderSQ < BundleCylinder
             XY =  SQMapping(ind2,1:2)  ; %  
             
             
-            
+%             sdfsf=3
         end
         
     end

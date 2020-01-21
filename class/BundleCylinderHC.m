@@ -21,22 +21,22 @@ classdef BundleCylinderHC < BundleCylinder
         end
         
         function XY=findExtraCylInplanePosition(obj, RTable, qColRow,fRefCyl)
-                        qColRow=unique(qColRow,'rows','legacy') ;
-
+%             qColRow=unique(qColRow,'rows','legacy') ;
+            
             ranRefCyl =fRefCyl  ;
             RefXY =  obj.CylInplanePosition(RTable(ranRefCyl,2),:)  ;
-
-            RefColRow =  RTable(ranRefCyl, 6:7)  ;
-            HCMapping= findHClatticeMapping( 1 ,[50 50]) ; 
-            [~,ind] =ismember(RefXY ,  HCMapping(:,1:2) ,'rows') ;
-
-            RefCyldColRow_shift =  RefColRow- HCMapping(ind,3:4) ; % 
-
-            [~,ind2] =ismember( qColRow - RefCyldColRow_shift ,  HCMapping(:,3:4) ,'rows')   ;
-            XY =  HCMapping(ind2,1:2)  ; % 
-             
-             
             
+            RefColRow =  RTable(ranRefCyl, 6:7)  ;
+            HCMapping= findHClatticeMapping( 1 ,[50 50]) ;
+            [~,ind] =ismember(RefXY ,  HCMapping(:,1:2) ,'rows') ;
+            
+            RefCyldColRow_shift =  RefColRow- HCMapping(ind,3:4) ; %
+            
+            [~,ind2] =ismember( qColRow - RefCyldColRow_shift ,  HCMapping(:,3:4) ,'rows')   ;
+            XY =  HCMapping(ind2,1:2)  ; %
+            
+            
+%             dsf=3
         end
         
     end

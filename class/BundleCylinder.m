@@ -156,15 +156,15 @@ classdef BundleCylinder < handle
             end      
 %             rr=0.6;  %-----------debug
             bpnmConst=0.34;     EnCylSpace=1;   % 2.3/2
-            x0=EnCylSpace*InplaneXY(1); y0=EnCylSpace*InplaneXY(2);
-            ZZrange=queryCylBase' ;
+            x0=EnCylSpace*InplaneXY(:,1); y0=EnCylSpace*InplaneXY(:,2);
+            ZZrange=reshape(queryCylBase, length(queryCylBase) ,1);
             if ~xor(ismember(ThefSimilarDirCylder,obj.AGroup) ,obj.AGroupGoUp)
                 CC=mod(ZZrange-correct(1),obj.period(1))*obj.period(2)*2*pi/obj.period(1);  %theta
             else
                 CC=mod(ZZrange-correct(2),obj.period(1))*obj.period(2)*2*pi/obj.period(1);  %theta , fixed 08/24
             end
             [x,y] = pol2cart(CC,rr*0.95);  
-            LocalXYZ=[x+x0*ones(size(x)), y+y0*ones(size(y)), ZZrange*bpnmConst ,ones(size(x))]; 
+            LocalXYZ=[x+x0, y+y0, ZZrange*bpnmConst ,ones(size(x))]; 
             XYZ=   transpose(obj.TransformMatrix2*LocalXYZ' );
        end
        
