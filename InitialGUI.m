@@ -8,7 +8,7 @@ TStrO='<html><b><i><font size=5>Square</h1></html>' ;  % ALL tab use html to set
 % replace(TStrO,"Square","Hello")
 
 drawnow;warning('off','MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame');
-jFig = get(handle(f), 'JavaFrame'); jFig.setMaximized(true); drawnow;
+jFig = get(handle(f), 'JavaFrame'); jFig.setMaximized(true); drawnow; % this line makes figure(gcf) always maximize the window for MATLAB 2018
 
 tgroup = uitabgroup('Parent', f);   drawnow;
 tab_part = uitab('Parent', tgroup, 'Title', replace(TStrO,"Square","Part"));
@@ -34,11 +34,17 @@ ss_STEP.ButtonDownFcn =@(src,evn)ssSTEP_Button(src,evn);
 %--------merged as Routing tab
 ss_routing=uitab('Parent', Sub_group_mech, 'Title',  replace(TStrO,"Square","Routing"));
 RoutingTab = uitabgroup('Parent', ss_routing);
+% ss_RoutingParameter = uitab('Parent', RoutingTab, 'Title', replace(TStrO,"Square","parameter"),'Tag','ss_RoutingParameter' );
+
+
+
 
 ss_Scaffold = uitab('Parent', RoutingTab, 'Title', replace(TStrO,"Square","scaffold"),'Tag','ss_Scaffold' );
 ss_Scaffold.ButtonDownFcn =@(src,evn)ssSTEP_Button(src,evn);
 
 ss_Staple = uitab('Parent', RoutingTab, 'Title', replace(TStrO,"Square","staple"),'Tag' , 'ss_Staple' );
+ss_Staple.ButtonDownFcn =@(src,evn)ssSTEP_Button(src,evn);
+
 ss_OH = uitab('Parent', RoutingTab, 'Title', replace(TStrO,"Square","overhang"));
 ss_OH.ButtonDownFcn =@(src,evn)ssOH_Button(src,evn);
 
@@ -53,11 +59,13 @@ ss_json.ButtonDownFcn=@(src,evn)ssJSON_Button(src,evn) ;
 ss_oxDNA = uitab('Parent', Sub_group_mech, 'Title',  replace(TStrO,"Square","Simulation"));
 
 SubSub_group_oxDNA = uitabgroup('Parent', ss_oxDNA);
-sss_Confforce= uitab('Parent', SubSub_group_oxDNA, 'Title',  replace(TStrO,"Square","Topogoly and Conf"));
+sss_Confforce= uitab('Parent', SubSub_group_oxDNA, 'Title',  replace(TStrO,"Square","Topogoly and Conf"),'Tag' , 'sss_Confforce' );
 % sss_pattern= uitab('Parent', SubSub_group_oxDNA, 'Title',  replace(TStrO,"Square","pattern"),'Tag','sss_pattern');
+sss_Confforce.ButtonDownFcn =@(src,evn)ssSTEP_Button(src,evn);
 
 
-sss_Traj= uitab('Parent', SubSub_group_oxDNA, 'Title',  replace(TStrO,"Square","Trajectory"));
+sss_Traj= uitab('Parent', SubSub_group_oxDNA, 'Title',  replace(TStrO,"Square","Trajectory") ,'Tag' , 'sss_Traj' );
+sss_Traj.ButtonDownFcn =@(src,evn)ssSTEP_Button(src,evn);
 
 
 
@@ -226,6 +234,8 @@ ax= findobj(gcf,'Tag','MechOH3D');
 axes(ax);
 fH=gcf ;
 
+fH.UserData.MovieStep =6 ; % play the 6th movie in ChangeAxesLimit
+
 fH.KeyPressFcn=@(fH,evn)ChangeAxesLimit(fH,evn) ; % temporary change to other keypress fcn
 fH.UserData.saveKeyMove3 = @(evn)ChangeAxesLimit(fH,evn) ; % temporary change to other keypress fcn
 
@@ -234,6 +244,17 @@ function ssSTEP_Button(src,~)
 ax= findobj(gcf,'Tag','SS','Type','Axes');
 axes(ax);
 fH=gcf ;
+
+src;
+if isequal(src, findobj(gcf,'Tag','ss_Scaffold') )
+    fH.UserData.MovieStep =4 ; % play the 4th movie in ChangeAxesLimit
+elseif isequal(src, findobj(gcf,'Tag','ss_Staple') )
+    fH.UserData.MovieStep =5 ; % play the 5th movie in ChangeAxesLimit
+elseif isequal(src, findobj(gcf,'Tag','sss_Confforce') )
+    fH.UserData.MovieStep =7 ; % play the 7th movie in ChangeAxesLimit
+elseif isequal(src, findobj(gcf,'Tag','sss_Traj') )
+    fH.UserData.MovieStep =8 ; % play the 8th movie in ChangeAxesLimit
+end
 
 fH.KeyPressFcn=@(fH,evn)ChangeAxesLimit(fH,evn) ; % temporary change to other keypress fcn
 fH.UserData.saveKeyMove3 = @(evn)ChangeAxesLimit(fH,evn) ; % temporary change to other keypress fcn

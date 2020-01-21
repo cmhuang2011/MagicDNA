@@ -1,5 +1,26 @@
 function f= main()
+
+%     <MagicDNA (Multi-component Assembly in a Graphical Interface guided by Computation for DNA origami) is a software for designing multi-component DNA origami structures.>
+%     Copyright (C) <2020>  <Chao-Min Huang, Hai-Jun Su, and Carlos E. Castro>
+%     The Ohio State University 
+%     
+% 
+%     This program is free software: you can redistribute it and/or modify
+%     it under the terms of the GNU General Public License as published by
+%     the Free Software Foundation, either version 3 of the License, or
+%     (at your option) any later version.
+% 
+%     This program is distributed in the hope that it will be useful,
+%     but WITHOUT ANY WARRANTY; without even the implied warranty of
+%     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%     GNU General Public License for more details.
+% 
+%     You should have received a copy of the GNU General Public License
+%     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 %% main script, Create GUI
+
+
 clear; clc ; % close all; 
 filepath=mfilename('fullpath') ;
 Inds = strfind(filepath,filesep) ;
@@ -9,10 +30,12 @@ cd( filepath(1: Inds(end)-1));
 addpath(strcat(pwd, filesep, 'class' )) ;
 addpath(strcat(pwd, filesep, 'functions' )) ;
 addpath(strcat(pwd, filesep, 'parts' )) ;
+addpath(strcat(pwd, filesep, 'scripts' )) ;
 addpath(strcat(pwd, filesep, 'functions',filesep,'jsonlab' )) ;
+addpath(strcat(pwd, filesep, 'InstructionMovie' )) ;
 
 %get version to assign Tooltip or TooltipString 
-vv=version('-release') ;
+% vv=version('-release') ;
 % if str2num(vv(1:4))==2017
     ToolTipName='TooltipString' ;
 % else
@@ -57,6 +80,18 @@ hlink =linkprop([allaxes.Assemblymain allaxes.AssemblymainHiden],{ 'XLim' 'YLim'
 allaxes.Assemblymain.UserData.hlink= hlink ;
 allaxes.AssemblymGraph= axes(ss_Assembly,'Position',[0.7,0.3,0.23,0.23],'Tag','AssemblyGraph');  hold on;
 setAllowAxesRotate(h,allaxes.AssemblymGraph,0) ;
+%% ------Parameter tab
+% % Parameter = uibuttongroup(ss_RoutingParameter,'Position',[0.6 0.7 0.15 0.2],'Title','Prevent stacking','FontSize',12,'BorderWidth',2) ;
+% 
+% Parameter.scafXoverTol = uibuttongroup(ss_RoutingParameter,'Position',[0.6 0.55 0.35 0.15],'Title','Ignore scaf Xovers from ends by ','FontSize',12,'BorderWidth',2) ;
+% Parameter.stapXoverTol = uibuttongroup(ss_RoutingParameter,'Position',[0.6 0.40 0.35 0.15],'Title','Ignore staple Xovers from ends by ','FontSize',12,'BorderWidth',2) ;
+% Parameter.stapCutLimit = uibuttongroup(ss_RoutingParameter,'Position',[0.6 0.25 0.35 0.15],'Title','staple break limit','FontSize',12,'BorderWidth',2) ;
+% 
+% Parameter.choice.scafXoverTol.text=uicontrol('Style','text','Parent',Parameter.scafXoverTol,'Units','normalized','Position',[0.02 0.65 0.8 0.3],'String','Bundle index, separate by space or '',''',...
+%     'HorizontalAlignment','left');
+% Parameter.choice.scafXoverTol.edit=uicontrol('Style','edit','Parent',Parameter.scafXoverTol,'Units','normalized','Position',[0.05 0.2 0.8 0.2]  );
+
+
 %% -------Scaf tab
 
 
@@ -137,6 +172,11 @@ allbtn.PlotScaf= uicontrol(ss_Scaffold,'Style','pushbutton',...
     'Units','normalized','Position',[0.7 0.05 0.1 0.1],'String','PlotScaf','Tag','PlotScaf');
 allbtn.PlotScaf.Callback=@(src,evn)PlotScaf_Fcn(src,evn)   ;
 
+allbtn.MultiScaf= uicontrol(ss_Scaffold,'Style','pushbutton',...
+    'Units','normalized','Position',[0.8 0.7 0.1 0.1],'String','MultiScaf','Tag','MultiScaf');
+allbtn.MultiScaf.Callback=@(src,evn)SplitScafToMultiScaf(src,evn)   ;
+
+
 allbtn.MechScafAgain.(ToolTipName)='Apply the scaffold algorithm to obtain a scaffold routing.' ;
 allbtn.MechScafDefault.(ToolTipName)='Set the scaffold options to default values' ;
 allbtn.PlotScaf.(ToolTipName)='If users have used ''caDNAno'' to update the routing, this button is to compare the routings.' ;
@@ -216,11 +256,16 @@ allaxes.MechOH2D= axes(ss_OH,'Position',[0.7 0.78 0.28 0.2],'Tag','MechOH2D');  
 
 
 allbtn.MechOH= uicontrol(ss_OH,'Style','pushbutton',...
-    'Units','normalized','Position',[0.7 0.1 0.08 0.1],'String','OHfunction','Tag','OHfunction');
+    'Units','normalized','Position',[0.7 0.1 0.06 0.1],'String','OHfunction','Tag','OHfunction');
 allbtn.MechOH2= uicontrol(ss_OH,'Style','pushbutton',...
-    'Units','normalized','Position',[0.8 0.1 0.08 0.1],'String','Add','Tag','OHAdd','Enable','off');
+    'Units','normalized','Position',[0.78 0.1 0.06 0.1],'String','Add','Tag','OHAdd','Enable','off');
 allbtn.MechOH3= uicontrol(ss_OH,'Style','pushbutton',...
-    'Units','normalized','Position',[0.9 0.1 0.08 0.1],'String','Apply 1st to All','Tag','ApplyAll','Enable','off');
+    'Units','normalized','Position',[0.86 0.1 0.06 0.1],'String','Apply 1st to All','Tag','ApplyAll','Enable','off');
+allbtn.MechOH4= uicontrol(ss_OH,'Style','pushbutton',...
+    'Units','normalized','Position',[0.92 0.1 0.06 0.1],'String','Add Single','Tag','Add Single','Enable','off');
+align([allbtn.MechOH allbtn.MechOH2 allbtn.MechOH3 allbtn.MechOH4 ],'distribute','bottom');
+
+
 
 allbtn.MechOH.(ToolTipName)='Initialize the tool or Clear the table data.' ;
 allbtn.MechOH2.(ToolTipName)='Add a pair of the red and blue nodes to the table.' ;
@@ -230,11 +275,10 @@ allbtn.MechOH3.(ToolTipName)='For assigning the same setting to all overhang pai
 OHtext1 = uicontrol(ss_OH,'Style','text','Units','normalized','Position',[0.7 0.05 0.1 0.02],'String','Text1','Tag','OHText1','HorizontalAlignment','left');
 OHtext2 = uicontrol(ss_OH,'Style','text','Units','normalized','Position',[0.85 0.05 0.1 0.02],'String','Text2','Tag','OHText2','HorizontalAlignment','left');
 
-str2 = cellfun(@num2str,num2cell([6:12, 20]),'uniformoutput',0);
+str2 = cellfun(@num2str,num2cell([0, 6:12, 20]),'uniformoutput',0);
 str= {'3''','5'''}; str3= {'Connected','Free end'};
-t = uitable(ss_OH,'Units','normalized','Position',[0.7 0.17 0.28 0.58],'ColumnFormat',({[]  str [] [] str str2 str2 str3}),...
+t = uitable(ss_OH,'Units','normalized','Position',[ 0.7000    0.2500    0.2800    0.5800],'ColumnFormat',({[]  str [] [] str str2 str2 str3}),...
        'ColumnEditable', false,'ColumnName',{'A','B','C','D','E','F','G','H','I'},'Visible','off','Tag','OHTable');  
-
 TStrO='<html><font size=5>Location</h1></html>' ; 
 % t.ColumnEditable=[false false true false false] ;
  t.ColumnName{1}=replace(TStrO,"Location","P") ;
@@ -246,8 +290,14 @@ TStrO='<html><font size=5>Location</h1></html>' ;
  t.ColumnName{7}=replace(TStrO,"Location","nB") ;
  t.ColumnName{8}=replace(TStrO,"Location","Ax on Closing S.") ;
  t.ColumnName{9}=replace(TStrO,"Location","Highlight") ;
-
 t.ColumnEditable=[false true true false true true true true true] ; t.FontSize=12 ;
+
+% t2 = uitable(ss_OH,'Units','normalized','Position',[ 0.7000    0.2200    0.2800    0.2],'ColumnFormat',({[]  str [] [] str str2 str2 str3}),...
+%        'ColumnEditable', false,'ColumnName',{'A','B','C','D','E','F','G','H','I'},'Visible','off','Tag','OHTable2');  
+
+
+
+
 TooltipStr = 'This table is used to specify the overhang options for each pair of overhangs.';
 TooltipStr = [TooltipStr newline 'The overhangs will be extended from 5'' or 3'' site on PAx and PBx points.'] ;
 TooltipStr = [TooltipStr newline 'Enable column allows to temporarily ignored in the algorith and easily recover if needed.'] ;
@@ -321,6 +371,10 @@ strs={'Show num', 'Show ends', 'Both ','None' } ;
 jsonPop=uicontrol('Style','popupmenu','Parent',ss_json,...
     'Units','normalized','Position',[0.9 0.2  0.05  0.04],'Value',3,'String',strs);
 jsonPop.(ToolTipName)='Change representations for staple strands.' ;
+
+jsonPop2=uicontrol('Style','popupmenu','Parent',ss_json,...
+    'Units','normalized','Position',[0.9 0.15  0.05  0.04],'Value',1,'String',{'select scaffold'});
+jsonPop2.(ToolTipName)='Change representations for staple strands.' ;
 
 setAllowAxesRotate(h,allaxes.cadnano2D,0) ;
 
@@ -438,7 +492,7 @@ allbtn.MechStapleAgain.Callback= @(src,evn)SearchStap(src,evn) ;
 allbtn.MechStapleJson.Callback= @(src,evn)UseCadnano(src,evn) ;
 allbtn.MechOH.Callback= @(src,evn)OverhangInitial(src,evn) ;
 
-allbtn.json1.Callback= @(src,evn)cadnanoInitial(src,evn,jsonSlider1,jsonSlider2,jsonPop) ;
+allbtn.json1.Callback= @(src,evn)cadnanoInitial(src,evn,jsonSlider1,jsonSlider2,jsonPop,jsonPop2) ;
 allbtn.oxDNA1.Callback= @(src,evn)oxDNAInitial(src,evn) ;
 allbtn.oxDNAPat1.Callback= @(src,evn)oxDNAPatInitial(src,evn) ;
 allbtn.oxDNATraj1.Callback= @(src,evn)LoadoxDNATraj(src,evn) ;
@@ -462,6 +516,7 @@ btn_IntLoad = uicontrol(ss_Assembly,'Style', 'pushbutton', 'String', 'Initialize
 btn_IntLoad.UserData.keepme = 1 ;
         
 f.SizeChangedFcn=@(src,evn)main_ChangeSize(src,evn) ;
+f.UserData.MovieStep =0 ;
 
 end
 
