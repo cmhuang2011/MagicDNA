@@ -5,12 +5,17 @@ function varargout=plotScaf2_Helix_V2( GetHyperB,CornerNotation,Isstap ,color , 
 %   V2: removed old helix function. Assume all use overhang's function to
 %   get helix
 
-SacfR=GetHyperB.ScafRouting ;
+SacfR=GetHyperB.ScafRouting{1} ;
+for k = 2 : length(GetHyperB.ScafRouting)
+ SacfR= [SacfR ; GetHyperB.ScafRouting{k}    ] ;
+end
+
 MaxBase=max(SacfR(:,3));
 
 skipPattern1=9:60:MaxBase;   % skip mod2 =0   %test 4/20
 skipPattern2=39:60:MaxBase;
 
+     AllSkipBase =GetHyperB.skipBase ;
 
 Coeff= 0.85*0.4 ;
 
@@ -35,7 +40,6 @@ for stai=1:length(CornerNotation)   %actually mean scaffold, in case multi scaff
     BaseCenterHelix =zeros(10000,3);    % oxdna center location
     NVec =zeros(10000,3);    % oxdna center location
     BundleRout = zeros(10000,2);    % BelongM
-     AllSkipBase =GetHyperB.skipBase ;
     for edgeinSCR=1:2:size(StapAll,1)
          C5Cyl=StapAll(edgeinSCR,1);
          bundle=GetHyperB.RelateTable(GetHyperB.RelateTable(:,5)==C5Cyl,1)   ;%multi-section needs be cautious
@@ -150,8 +154,9 @@ for stai=1:length(CornerNotation)   %actually mean scaffold, in case multi scaff
      pScaf2H{stai}=plot3(  StapHelix2(:,1),StapHelix2(:,2),StapHelix2(:,3),'-k','LineWidth',1.5,'Color',color);
    
      
-    pScaf_center{stai}=scatter3(  BaseCenterHelix(:,1),BaseCenterHelix(:,2),BaseCenterHelix(:,3),[], color,'.');
-   
+    pScaf_center{stai}=line(  BaseCenterHelix(:,1),BaseCenterHelix(:,2),BaseCenterHelix(:,3),'LineStyle','none', 'Marker','.');  % increase efficiency 08/26/2019
+%      pScaf_center{stai}=scatter3(  BaseCenterHelix(:,1),BaseCenterHelix(:,2),BaseCenterHelix(:,3),[], color,'.');
+  
 %     pScaf2H{stai}=plot3(  StapHelix(:,1),StapHelix(:,2),StapHelix(:,3),'-k','LineWidth',1.5);
     %         text( StapHelix(1,1), StapHelix(1,2), StapHelix(1,3),num2str(stai) );
 %     dfsdg=4

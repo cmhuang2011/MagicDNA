@@ -52,7 +52,9 @@ stapletext0 = ssScaf ;
 stapletext0= [stapletext0 ; OtherOverhangs]   ; %CM
 
 stapletext = repmat(stapletext0,5,1);
-stapletext{numel(stapletext)+1}=scaffoldtext;
+for k= 1: length(scaffoldtext)
+stapletext{numel(stapletext)+1}=scaffoldtext{k};
+end
 originalLength = numel(stapletext);
 %% STEP 1: find all starting sequences that are 5 bases long
 bases = categorical({'A' 'T' 'G' 'C'});

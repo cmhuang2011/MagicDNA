@@ -48,8 +48,8 @@ BCB_C5indp1=[ GetHyperB.RelateTable( GetHyperB.RelateTable(:,5)==C5indp1(1) ,1:2
 
 sH2D.UserData.ScafBCB = [ BCB_C5ind,BCB_C5indp1];
 
-[ BCB_C5ind,BCB_C5indp1]
-
+[ BCB_C5ind,BCB_C5indp1];
+% ind
 StrShow= sprintf('Cadnano label= %i[%i] ' , sH2D.UserData.SFC_C4notation(ind ,:) ) ;
 StrShow = [StrShow newline 'Scaf Position = ' num2str(ind)] ;
 % StrShow{2} =' test '

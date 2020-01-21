@@ -37,8 +37,13 @@ else
      
     
 end
- 
-C5ind =  src.UserData.SFC(ind ,:) ; C5indp1 =  src.UserData.SFC(ind+1 ,:) ;
+%  ind
+C5ind =  src.UserData.SFC(ind ,:) ;
+if ind+1<=size(src.UserData.SFC,1)
+C5indp1 =  src.UserData.SFC(ind+1 ,:) ;
+else
+C5indp1 =  src.UserData.SFC(ind ,:) ;    
+end
 
 BCB_C5ind=[ GetHyperB.RelateTable( GetHyperB.RelateTable(:,5)==C5ind(1) ,1:2) ,C5ind(2) ] ;
 BCB_C5indp1=[ GetHyperB.RelateTable( GetHyperB.RelateTable(:,5)==C5indp1(1) ,1:2) ,C5indp1(2) ] ;
@@ -47,8 +52,27 @@ src.UserData.ScafBCB = [ BCB_C5ind,BCB_C5indp1];
 [ BCB_C5ind,BCB_C5indp1] ;
 
 StrShow= sprintf('Cadnano label= %i[%i] ' , src.UserData.SFC_C4notation(ind ,:) ) ;
-StrShow = [StrShow newline 'Scaf Position = ' num2str(ind)] ;
+% StrShow = [StrShow newline 'Scaf Position = ' num2str(ind)] ;
+
+
+[aa,~] = cellfun(@size,GetHyperB.ScafAllBase) ; 
+
+Caa = cumsum(aa) ;
+WhichScaf = ind<=cumsum(aa) ; 
+WhichScaf = find(WhichScaf) ;
+if isempty(WhichScaf)
+    WhichScaf=1 ;
+else
+    WhichScaf=WhichScaf(1)  ;
+end
+
+aa=[0;Caa];
+
+StrShow = [StrShow newline 'Scaf(' num2str(WhichScaf)  ')Position = ' num2str(ind-aa(WhichScaf))] ;
+
 % StrShow{2} =' test '
+% sdfsf=3
+% 
 Json_Text.String= StrShow ;
 axes(ax2);
 % sdfsf=3

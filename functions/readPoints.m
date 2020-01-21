@@ -89,9 +89,18 @@ end
 
 XYZ  ;
 
-MainScreeSize = get(0,'screensize');% MainScreeSize(3)=round(0.5*MainScreeSize(3)) ;
-fAskLIne= figure('name','Assign lines','Position',MainScreeSize,'numbertitle','on'); clf;
+
+
+% MainScreeSize = get(0,'screensize');% MainScreeSize(3)=round(0.5*MainScreeSize(3)) ;
+% fAskLIne= figure('name','Assign lines','Position',MainScreeSize,'numbertitle','on'); clf;
+fAskLIne= figure('name','Assign lines','numbertitle','on'); clf;
+drawnow;warning('off','MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame');
+jFig = get(handle(fAskLIne), 'JavaFrame'); jFig.setMaximized(true); drawnow;
+% fAskLIne_keypress
+fAskLIne.KeyPressFcn=@(src,evn)fAskLIne_keypress(src,evn);
 % fAskLIne=figure(3235) ; clf ;
+
+
 
 
 sH = scatter3(    XYZ(:,1), XYZ(:,2), XYZ(:,3),126 ,'o', 'filled' ) ; hold on ;
@@ -135,6 +144,13 @@ uistack(sH,'top');
 
 uiwait(fAskLIne);
 
+end
+
+function fAskLIne_keypress(src,evn)
+switch evn.Key
+    case 'h'
+        implay('PointToLines.mp4');
+end
 end
 
 function Export(src,evn,sH,pH,ss_STEP ,fAskLIne)

@@ -5,13 +5,16 @@ function ssOption = GUIAsignSSInfo3( HyperB,fH,Prev_ssDNA,assemblyAxs_View )
 
 % fH= figure('name','single-strand options','Position',[300 300 800 600],'numbertitle','off');
 
-%     d = dialog('Position',[300 300 900 250],'Name','single-strand options');
+%     d = dialog('Position',[300 300 900 250],'Name','sing
+% le-strand options');
 
 % sdf=3
 % Prev_ssDNA.BundleShiftTwoSide
 tic
 
 ssOption=[];
+if ~isempty(Prev_ssDNA) ; ssOption= Prev_ssDNA ;   end
+
 d = figure('Position',[300 300 900 250],'Name','single-strand options');
 d.Units='normalized';d.OuterPosition=[0 0 1 1];  clf;
 aH=gca;
@@ -316,6 +319,8 @@ uiwait(d);
         ax=gca;
         interval =5; R=1.1;
         switch  evn.Character
+            case 'h'
+            implay('ssScaf.mp4');
             case 'q'
                 ax.XLim= ax.XLim + interval ;
             case 'Q'
@@ -600,6 +605,14 @@ uiwait(d);
 
 
     function SetAll(src,~,t)
+        answer = questdlg('Are you sure to change all? This will apply to all connections.', ...
+	'Change all ends', ...
+	'No','Yes','Yes');
+        switch answer
+            case 'No'
+                return
+        end
+        
         for k22=1:size(t.Data,1)
             t.Data{k22,2}=str2double(src.String{src.Value});
         end

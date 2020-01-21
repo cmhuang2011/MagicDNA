@@ -13,9 +13,9 @@ popOxdnaTraj= findobj(fH,'Tag','popOxdnaTraj') ;  popOxdnaTraj.Value=1;
 listOxdnaTraj= findobj(fH,'Tag','listOxdnaTraj') ;  listOxdnaTraj.Value=1;
 
 btn_oxDNATraj2= findobj(fH,'Tag','btn_oxDNATraj2') ;   % Compute deform
-btn_oxDNATraj3= findobj(fH,'Tag','btn_oxDNATraj3') ; 
+btn_oxDNATraj3= findobj(fH,'Tag','btn_oxDNATraj3') ;
 
-btn_oxDNATraj4= findobj(fH,'Tag','btn_oxDNATraj4') ;   %use center 
+btn_oxDNATraj4= findobj(fH,'Tag','btn_oxDNATraj4') ;   %use center
 btn_oxDNATraj5= findobj(fH,'Tag','btn_oxDNATraj5') ;    %use orientaion
 
 axes(ax);cltab; hold on ;axis equal;
@@ -45,26 +45,26 @@ listOxdnaTraj.String=str2 ;
 listOxdnaTraj.Max=oxDNA_ex.N_frame ;
 src.UserData.oxDNA_ex=oxDNA_ex;
 %------------
-            
-            
+
+
 popOxdnaTraj.Callback =@(src,evn)popCallBack(src,evn,oxDNA_ex,ax);
 listOxdnaTraj.Callback =@(src,evn)lstCallBack(src,evn,oxDNA_ex,ax);
-btn_oxDNATraj2.Callback=@(src,evn)Mapping(src,evn,oxDNA_ex,ax,ax2); 
+btn_oxDNATraj2.Callback=@(src,evn)Mapping(src,evn,oxDNA_ex,ax,ax2);
 
-btn_oxDNATraj5.Callback=@(src,evn)ColorfulRMSF; 
+btn_oxDNATraj5.Callback=@(src,evn)ColorfulRMSF;
 
 btn_oxDNATraj4.Callback=@(src,evn)RMSD_RMSF(src,evn,oxDNA_ex,ax,ax2);  btn_oxDNATraj4.String='RMSD RMSF' ;
 
 
-btn_oxDNATraj3.Callback=@(src,evn)ExportBILD(src,evn,oxDNA_ex,ax,ax2,popOxdnaTraj); 
+btn_oxDNATraj3.Callback=@(src,evn)ExportBILD(src,evn,oxDNA_ex,ax,ax2,popOxdnaTraj);
 
 fprintf('finish loading trajectory \n ')
 
-end   
+end
 
 function  RMSD_RMSF(src,evn,oxDNA_ex,ax,ax2)
 tic
-TrajOri =oxDNA_ex.Traj ;  
+TrajOri =oxDNA_ex.Traj ;
 
 NoDriftTraj=TrajOri ;
 % NoDriftTraj=zeros(size(TrajOri,1),9,size(TrajOri,3) ) ;
@@ -86,65 +86,65 @@ for frI= 1:size(TrajOri,3)
     
     [regParams,~,~]=absor(A3byNaLL,B3byNaLL);
     
-    A_prime = transpose(regParams.R*A3byNaLL + regParams.t  ); % Base centers 
+    A_prime = transpose(regParams.R*A3byNaLL + regParams.t  ); % Base centers
     
     A_BVec=  transpose(TrajOri(:,4:6,frI )) ;  % orientations does not consider translation
     BVec_prime = transpose(regParams.R*A_BVec );
     A_NVec=  transpose(TrajOri(:,7:9,frI )) ;
-    NVec_prime = transpose(regParams.R*A_NVec );   
+    NVec_prime = transpose(regParams.R*A_NVec );
     %     A_prime=transpose(A_prime) ;
     %  scatter3(A_prime(:,1),A_prime(:,2),A_prime(:,3),'.') ;
     NoDriftTraj(:,:,frI) =[A_prime,BVec_prime,NVec_prime] ;
 end
 toc
 
-oxDNA_ex.Traj=NoDriftTraj ;  
+oxDNA_ex.Traj=NoDriftTraj ;
 
 
 %-------------RMSD
-Ref_RMSD = NoDriftTraj(:,1:3,1 ); %initial configuration as reference 
-% Ref_RMSD = MeanConf ; % deviation from mean, for Receptor 
+Ref_RMSD = NoDriftTraj(:,1:3,1 ); %initial configuration as reference
+% Ref_RMSD = MeanConf ; % deviation from mean, for Receptor
 RMSD_By_Frame = zeros(size(TrajOri,3),1 ) ;
 % RMSD_By_xComp = zeros(size(TrajOri,3),1 ) ;
 % RMSD_By_yComp = zeros(size(TrajOri,3),1 ) ;
 % RMSD_By_zComp = zeros(size(TrajOri,3),1 ) ;
-% 
-% 
+%
+%
 for k=1:length(RMSD_By_Frame)
     dxyz = NoDriftTraj(:,1:3,k ) - Ref_RMSD ;
-%     dxyz=dxyz(ReceptorPara.RecTraceBase(2),:) ;  % only for Receptor
-%     %  dxyz=dxyz(:,1) ;  % only for Receptor
+    %     dxyz=dxyz(ReceptorPara.RecTraceBase(2),:) ;  % only for Receptor
+    %     %  dxyz=dxyz(:,1) ;  % only for Receptor
     RMSD_By_Frame(k) = rms(dxyz(:)) ;
-%     RMSD_By_xComp(k) = rms(dxyz(:,1)) ;
-%     RMSD_By_yComp(k) = rms(dxyz(:,2)) ;
-%     RMSD_By_zComp(k) = rms(dxyz(:,3)) ;
+    %     RMSD_By_xComp(k) = rms(dxyz(:,1)) ;
+    %     RMSD_By_yComp(k) = rms(dxyz(:,2)) ;
+    %     RMSD_By_zComp(k) = rms(dxyz(:,3)) ;
     
 end
 
 
 % % histogram(RMSD_By_Frame(100:end)) ;
 % N_mov=1 ;
-% 
+%
 % figure(534);clf; hold on ;
-% % p1=plot(movmean(RMSD_By_Frame,N_mov) ,'LineWidth',2 ); 
-% p2=plot(movmean(RMSD_By_xComp,N_mov),'LineWidth',1 ); 
-% % p3=plot(movmean(RMSD_By_yComp,N_mov),'LineWidth',1 ); 
-% % p4=plot(movmean(RMSD_By_zComp,N_mov),'LineWidth',1 ); 
-% 
+% % p1=plot(movmean(RMSD_By_Frame,N_mov) ,'LineWidth',2 );
+% p2=plot(movmean(RMSD_By_xComp,N_mov),'LineWidth',1 );
+% % p3=plot(movmean(RMSD_By_yComp,N_mov),'LineWidth',1 );
+% % p4=plot(movmean(RMSD_By_zComp,N_mov),'LineWidth',1 );
+%
 % legend([p1, p2,p3,p4],{'RMSD from Eq.', 'RMSD_z from Eq.', 'RMSD_x from Eq.', 'RMSD_y from Eq.'})
 
 % return
 % figure(214);hold on ;
 % QQ=8*0;
 % subplot(3,8,QQ+[1:3]) ;
-% plot(movmean(RMSD_By_xComp,N_mov),'LineWidth',1 ); 
+% plot(movmean(RMSD_By_xComp,N_mov),'LineWidth',1 );
 % subplot(3,8,QQ+[4]) ;
-% histogram(movmean(RMSD_By_xComp,N_mov),'LineWidth',1 ); 
+% histogram(movmean(RMSD_By_xComp,N_mov),'LineWidth',1 );
 % N_mov=20;
 % subplot(3,8,QQ+[5:7]) ;
-% plot(movmean(RMSD_By_xComp,N_mov),'LineWidth',1 ); 
+% plot(movmean(RMSD_By_xComp,N_mov),'LineWidth',1 );
 % subplot(3,8,QQ+[8]) ;
-% histogram(movmean(RMSD_By_xComp,N_mov),'LineWidth',1 ); 
+% histogram(movmean(RMSD_By_xComp,N_mov),'LineWidth',1 );
 
 
 
@@ -168,7 +168,6 @@ plot(RMSF_By_Base);str={strcat( 'Avg = ', num2str(mean(RMSF_By_Base))  ) };
 title(str) ;
 xlabel('Base') ; ylabel('RMSF (nm)') ;
 %++++
-ReceptorTotalBase = 15448 ;
 subplot(4 ,3 ,[ 9 12] ) ;
 % h1= histogram(RMSF_By_Base(1:ReceptorTotalBase),0:0.5:max(RMSF_By_Base) ) ; hold on ;
 h2= histogram(RMSF_By_Base(1:end),20 ) ;
@@ -178,11 +177,77 @@ xlabel('RMSF (nm)') ;  ylabel('N') ;
 % return
 % toc
 %------------------
-axes(ax2);cla; hold on ;axis equal;axes(ax2);  
+axes(ax2);cla; hold on ;axis equal;axes(ax2);
+% figure(234);clf; hold on ;axis equal;
+
+
 CClorData=RMSF_By_Base ;
+
+%---------- custom color for fig 5
+% % colormap jet ;
+% CC=colormap ;
+% BM=oxDNA_ex.BM  ;
+% AllBundle=unique(BM) ;
+% %  WireFrameBundles = [1:3]' ;
+% LatticeBundles= [1:10]' ;
+% % SurfaceBundlesl = [1:10] ;
+% % WireFrameBundles = setdiff(AllBundle, union(SurfaceBundlesl,LatticeBundles)) ;
+% 
+%   WireFrameBundles=[21] ;
+%   SurfaceBundlesl = setdiff(AllBundle, union(WireFrameBundles,LatticeBundles)) ;
+% 
+% Inds= ismember(BM ,LatticeBundles ) ;
+% if sum(Inds)>0
+% sH=scatter3( Ref_RMSF(Inds,1) , Ref_RMSF(Inds,2) ,Ref_RMSF(Inds,3)  ) ;
+% sH.CData =CC(8,:);
+% MaxV = max(RMSF_By_Base(Inds) ) ;MinV = min(RMSF_By_Base(Inds) ) ;
+% vq = interp1([MinV;MaxV],[0 0.5 1 0 ;0.2 1 0.6 0.5],RMSF_By_Base(Inds),'linear','extrap') ;
+% % vq = interp1([MinV;MaxV-0.2],[0 0 1 0 ;0 1 1 0.5],RMSF_By_Base(Inds),'linear','extrap') ;
+% % vq = interp1([MinV;MaxV ],[ 0.9 0.9 1  ;0 0 1],RMSF_By_Base(Inds)) ;
+% vq(vq>=1)=1; vq(vq<=0)=0;
+% sH.CData =vq(:,1:3) ;
+% sH.UserData=vq(:,4) ;
+% hold on;
+% end
+% 
+% Inds= ismember(BM,WireFrameBundles  ) ;
+% if sum(Inds)>0
+% sH2=scatter3( Ref_RMSF(Inds,1) , Ref_RMSF(Inds,2) ,Ref_RMSF(Inds,3)  ) ;    sH2.CData =CC(56,:);   %CC(56,:)
+% MaxV = max(RMSF_By_Base(Inds) ) ; MinV = min(RMSF_By_Base(Inds) ) ;
+% vq = interp1([MinV;MaxV ], [1 0.5 0  0 ; 0.8 0.4 0 0.5],RMSF_By_Base(Inds),'linear','extrap' ) ;
+% % vq = interp1([MinV;MaxV ], [1 0.8 0.8 0 ; 1 0 1 0.5],RMSF_By_Base(Inds),'linear','extrap' ) ;
+% % vq = interp1([MinV;MaxV ],[1 0.9 0.9  ; 1 0 0],RMSF_By_Base(Inds)) ;
+% % [1 0.8 0.8 0 ; 1 0 1 0.5]
+% vq(vq>=1)=1; vq(vq<=0)=0;
+% sH2.CData =vq(:,1:3) ;
+% sH2.UserData=vq(:,4) ;
+% end
+% 
+% 
+% Inds= ismember(BM,SurfaceBundlesl  ) ;
+% if sum(Inds)>0
+% sH3=scatter3( Ref_RMSF(Inds,1) , Ref_RMSF(Inds,2) ,Ref_RMSF(Inds,3)  ) ;    sH3.CData =[0,0.7,0  ];   %
+% MaxV = max(RMSF_By_Base(Inds) ) ;MinV = min(RMSF_By_Base(Inds) ) ;
+% vq = interp1([MinV;MaxV-0.5],[0 0.6 0.6 0.5; 1 1 0 0],RMSF_By_Base(Inds) ,'linear','extrap' ) ;
+% % vq = interp1([MinV;MaxV],[0 0.5 0.4 0.5;1 1 0 0],RMSF_By_Base(Inds) ,'linear','extrap' ) ;
+% vq(vq>=1)=1; vq(vq<=0)=0;
+% % vq = interp1([MinV;MaxV ],[0.7 1 0.7 0; 1 1 0 0.5],RMSF_By_Base(Inds)) ;
+% % [0.8 1 0.6 0; 0 0.6 0 0.5]
+% % vq = interp1([MinV;MaxV ],[0.9 1 0.9  ; 0,1,0 ],RMSF_By_Base(Inds)) ;
+% sH3.CData =vq(:,1:3) ;
+% sH3.UserData=vq(:,4) ;
+% end
+% % sH=scatter3( Ref_RMSF(:,1) , Ref_RMSF(:,2) ,Ref_RMSF(:,3)  ) ;
+% % sH.CData =CC(8,:);   % lattice use 8 :
+% 
+% % sH.CData =CC(56,:);   % lattice use 8 :
+% %  figure; hist(RMSF_By_Base(Inds))
+% 
+% return
+%---------
 % CClorData=ones(size(RMSF_By_Base)) ;
 
-[f,g,h]=plot3k({Ref_RMSF(:,1) , Ref_RMSF(:,2) ,Ref_RMSF(:,3)}, 'ColorData',CClorData ,'ColorRange',[min(RMSF_By_Base), max(RMSF_By_Base)] ) ;   
+[f,g,h]=plot3k({Ref_RMSF(:,1) , Ref_RMSF(:,2) ,Ref_RMSF(:,3)}, 'ColorData',CClorData ,'ColorRange',[min(RMSF_By_Base), max(RMSF_By_Base)] ) ;
 str={'RMSF' ; strcat( 'Avg = ', num2str(mean(RMSF_By_Base))  ) };
 title(str) ;
 %-----------For Receptor, Receptor with k1 or k3
@@ -192,12 +257,12 @@ title(str) ;
 % scatter3(Ref_RMSF(RecpEnd:end,1 ) , Ref_RMSF(RecpEnd:end,2 ) ,Ref_RMSF(RecpEnd:end,3 ) ,'g') ;
 % scatter3(Ref_RMSF(ReceptorPara.Inds,1 ) , Ref_RMSF(ReceptorPara.Inds,2) ,Ref_RMSF(ReceptorPara.Inds,3 ) ,'r') ;
 % scatter3(Ref_RMSF(ReceptorPara.RecTraceBase,1 ) , Ref_RMSF(ReceptorPara.RecTraceBase,2) ,Ref_RMSF(ReceptorPara.RecTraceBase,3 ) ,'c') ;
-% 
-% 
-% 
+%
+%
+%
 % RMSF_By_Base( ReceptorPara. RecTraceBase-0) ;
 % fprintf(' RMSF of traced bases =  %4.2f \n', RMSF_By_Base( ReceptorPara. RecTraceBase-0)) ;
-% 
+%
 % fprintf('mean RMSF =  %4.2f \n', mean(RMSF_By_Base( ReceptorPara. RecTraceBase-0))) ;
 % toc
 % sdf=3
@@ -226,93 +291,93 @@ oxDNA_ex.ExportBildRibbonTraj(Ribbon,frame,answer{1}) ;
 end
 
 function MappingUseCenter(src,evn,oxDNA_ex,ax,ax2)
-popOxdnaTraj= findobj(0,'Tag','popOxdnaTraj') ; 
+popOxdnaTraj= findobj(0,'Tag','popOxdnaTraj') ;
 SelectFrame = popOxdnaTraj.Value  ;
 
 ProvaConf = oxDNA_ex.Traj(:,:,1) ;
 TargeConf = oxDNA_ex.Traj(:,:,SelectFrame) ;
 BM =oxDNA_ex.BM ;
-axes(ax2);cla; hold on ;axis equal;axes(ax2);  
+axes(ax2);cla; hold on ;axis equal;axes(ax2);
 
-    A3byNaLL=  transpose(ProvaConf(:,1:3)) ;  
-    B3byNaLL=  transpose(TargeConf(:,1:3) );
+A3byNaLL=  transpose(ProvaConf(:,1:3)) ;
+B3byNaLL=  transpose(TargeConf(:,1:3) );
 
-    [regParamsaLL,~,~]=absor(B3byNaLL,A3byNaLL);
-    b_prime = transpose(regParamsaLL.R*B3byNaLL + regParamsaLL.t  );
+[regParamsaLL,~,~]=absor(B3byNaLL,A3byNaLL);
+b_prime = transpose(regParamsaLL.R*B3byNaLL + regParamsaLL.t  );
+
+b_NvecPrime = transpose(regParamsaLL.R*transpose(TargeConf(:,7:9))   );
+BendingAngle = zeros(size(b_NvecPrime,1) ,1  ) ;
+for sti =1 :max(oxDNA_ex.Strand)
+    Inds= find(oxDNA_ex.Strand ==sti);
+    
+    VecA1 =b_NvecPrime( Inds(1)  ,:) ;
+    VecA2 =b_NvecPrime( Inds(1+1)  ,:) ;
+    BendingAngle(Inds(1) )=acosd(dot(VecA1,VecA2)) ;
+    
+    for basej = 2: length( Inds)-1
+        Vecjm1 =b_NvecPrime( Inds(basej-1)  ,:) ;
+        Vecj1 =b_NvecPrime( Inds(basej)  ,:) ;
+        Vecjp1 =b_NvecPrime( Inds(basej)+1  ,:) ;
         
-    b_NvecPrime = transpose(regParamsaLL.R*transpose(TargeConf(:,7:9))   );
-    BendingAngle = zeros(size(b_NvecPrime,1) ,1  ) ;   
-   for sti =1 :max(oxDNA_ex.Strand)    
-      Inds= find(oxDNA_ex.Strand ==sti);
-      
-      VecA1 =b_NvecPrime( Inds(1)  ,:) ;
-      VecA2 =b_NvecPrime( Inds(1+1)  ,:) ;
-      BendingAngle(Inds(1) )=acosd(dot(VecA1,VecA2)) ;
-      
-      for basej = 2: length( Inds)-1
-      Vecjm1 =b_NvecPrime( Inds(basej-1)  ,:) ;
-      Vecj1 =b_NvecPrime( Inds(basej)  ,:) ;
-      Vecjp1 =b_NvecPrime( Inds(basej)+1  ,:) ;
-      
-      BendingAngle(Inds(basej)  )=mean([ acosd(dot(Vecjm1,Vecj1)) ,       acosd(dot(Vecjp1,Vecj1)) ]  )   ;          
-      end
-      Vecnm1 =b_NvecPrime( Inds(end-1)  ,:) ;
-      Vecn =b_NvecPrime( Inds(end)  ,:) ;
-      BendingAngle(Inds(end) )=acosd(dot(Vecnm1,Vecn)) ;
-      
-%        sdfsff=3
-   end
-   
-     plot3k({b_prime(:,1) , b_prime(:,2) ,b_prime(:,3)}, 'ColorData',BendingAngle ,'ColorRange',[min(BendingAngle), max(BendingAngle)] ) ;   
-    str={strcat('Use NVec mean d = ',num2str(mean(BendingAngle))) ;  strcat('min= ',num2str(min(BendingAngle),3)  ,' max= ',num2str(max(BendingAngle),3 )) } ;
-    title( str  );
-   
+        BendingAngle(Inds(basej)  )=mean([ acosd(dot(Vecjm1,Vecj1)) ,       acosd(dot(Vecjp1,Vecj1)) ]  )   ;
+    end
+    Vecnm1 =b_NvecPrime( Inds(end-1)  ,:) ;
+    Vecn =b_NvecPrime( Inds(end)  ,:) ;
+    BendingAngle(Inds(end) )=acosd(dot(Vecnm1,Vecn)) ;
+    
+    %        sdfsff=3
+end
+
+plot3k({b_prime(:,1) , b_prime(:,2) ,b_prime(:,3)}, 'ColorData',BendingAngle ,'ColorRange',[min(BendingAngle), max(BendingAngle)] ) ;
+str={strcat('Use NVec mean d = ',num2str(mean(BendingAngle))) ;  strcat('min= ',num2str(min(BendingAngle),3)  ,' max= ',num2str(max(BendingAngle),3 )) } ;
+title( str  );
+
 oxDNA_ex.BaseColor =BendingAngle ;
 frpintf('End of MappingUSingCenter \n')
 end
 
 function MappingUseNVec(src,evn,oxDNA_ex,ax,ax2)
-popOxdnaTraj= findobj(0,'Tag','popOxdnaTraj') ; 
+popOxdnaTraj= findobj(0,'Tag','popOxdnaTraj') ;
 SelectFrame = popOxdnaTraj.Value  ;
 
 ProvaConf = oxDNA_ex.Traj(:,:,1) ;
 TargeConf = oxDNA_ex.Traj(:,:,SelectFrame) ;
 BM =oxDNA_ex.BM ;
-axes(ax2);cla; hold on ;axis equal;axes(ax2);  
+axes(ax2);cla; hold on ;axis equal;axes(ax2);
 
-    A3byNaLL=  transpose(ProvaConf(:,1:3)) ;  
-    B3byNaLL=  transpose(TargeConf(:,1:3) );
+A3byNaLL=  transpose(ProvaConf(:,1:3)) ;
+B3byNaLL=  transpose(TargeConf(:,1:3) );
 
-    [regParamsaLL,~,~]=absor(B3byNaLL,A3byNaLL);
-    b_prime = transpose(regParamsaLL.R*B3byNaLL + regParamsaLL.t  );
+[regParamsaLL,~,~]=absor(B3byNaLL,A3byNaLL);
+b_prime = transpose(regParamsaLL.R*B3byNaLL + regParamsaLL.t  );
+
+b_NvecPrime = transpose(regParamsaLL.R*transpose(TargeConf(:,7:9))   );
+BendingAngle = zeros(size(b_NvecPrime,1) ,1  ) ;
+for sti =1 :max(oxDNA_ex.Strand)
+    Inds= find(oxDNA_ex.Strand ==sti);
+    
+    VecA1 =b_NvecPrime( Inds(1)  ,:) ;
+    VecA2 =b_NvecPrime( Inds(1+1)  ,:) ;
+    BendingAngle(Inds(1) )=acosd(dot(VecA1,VecA2)) ;
+    
+    for basej = 2: length( Inds)-1
+        Vecjm1 =b_NvecPrime( Inds(basej-1)  ,:) ;
+        Vecj1 =b_NvecPrime( Inds(basej)  ,:) ;
+        Vecjp1 =b_NvecPrime( Inds(basej)+1  ,:) ;
         
-    b_NvecPrime = transpose(regParamsaLL.R*transpose(TargeConf(:,7:9))   );
-    BendingAngle = zeros(size(b_NvecPrime,1) ,1  ) ;   
-   for sti =1 :max(oxDNA_ex.Strand)    
-      Inds= find(oxDNA_ex.Strand ==sti);
-      
-      VecA1 =b_NvecPrime( Inds(1)  ,:) ;
-      VecA2 =b_NvecPrime( Inds(1+1)  ,:) ;
-      BendingAngle(Inds(1) )=acosd(dot(VecA1,VecA2)) ;
-      
-      for basej = 2: length( Inds)-1
-      Vecjm1 =b_NvecPrime( Inds(basej-1)  ,:) ;
-      Vecj1 =b_NvecPrime( Inds(basej)  ,:) ;
-      Vecjp1 =b_NvecPrime( Inds(basej)+1  ,:) ;
-      
-      BendingAngle(Inds(basej)  )=mean([ acosd(dot(Vecjm1,Vecj1)) ,       acosd(dot(Vecjp1,Vecj1)) ]  )   ;          
-      end
-      Vecnm1 =b_NvecPrime( Inds(end-1)  ,:) ;
-      Vecn =b_NvecPrime( Inds(end)  ,:) ;
-      BendingAngle(Inds(end) )=acosd(dot(Vecnm1,Vecn)) ;
-      
-%        sdfsff=3
-   end
-   
-     plot3k({b_prime(:,1) , b_prime(:,2) ,b_prime(:,3)}, 'ColorData',BendingAngle ,'ColorRange',[min(BendingAngle), max(BendingAngle)] ) ;   
-    str={strcat('Use NVec mean d = ',num2str(mean(BendingAngle))) ;  strcat('min= ',num2str(min(BendingAngle),3)  ,' max= ',num2str(max(BendingAngle),3 )) } ;
-    title( str  );
-   
+        BendingAngle(Inds(basej)  )=mean([ acosd(dot(Vecjm1,Vecj1)) ,       acosd(dot(Vecjp1,Vecj1)) ]  )   ;
+    end
+    Vecnm1 =b_NvecPrime( Inds(end-1)  ,:) ;
+    Vecn =b_NvecPrime( Inds(end)  ,:) ;
+    BendingAngle(Inds(end) )=acosd(dot(Vecnm1,Vecn)) ;
+    
+    %        sdfsff=3
+end
+
+plot3k({b_prime(:,1) , b_prime(:,2) ,b_prime(:,3)}, 'ColorData',BendingAngle ,'ColorRange',[min(BendingAngle), max(BendingAngle)] ) ;
+str={strcat('Use NVec mean d = ',num2str(mean(BendingAngle))) ;  strcat('min= ',num2str(min(BendingAngle),3)  ,' max= ',num2str(max(BendingAngle),3 )) } ;
+title( str  );
+
 oxDNA_ex.BaseColor =BendingAngle ;
 end
 
@@ -320,14 +385,14 @@ end
 
 
 function Mapping(src,evn,oxDNA_ex,ax,ax2)
-popOxdnaTraj= findobj(0,'Tag','popOxdnaTraj') ; 
+popOxdnaTraj= findobj(0,'Tag','popOxdnaTraj') ;
 SelectFrame = popOxdnaTraj.Value  ;
 
 ProvaConf = oxDNA_ex.Traj(:,:,1) ;
 TargeConf = oxDNA_ex.Traj(:,:,SelectFrame) ;
 BM =oxDNA_ex.BM ;
 
-axes(ax2);cla; hold on ;axis equal;axes(ax2);  
+axes(ax2);cla; hold on ;axis equal;axes(ax2);
 dSave=zeros(size(ProvaConf,1),1) ;
 for buni =1:max(BM)
     Inds = BM==buni ;
@@ -342,17 +407,17 @@ for buni =1:max(BM)
     dxyz=A_prime-TargeConf(Inds,1:3) ;
     d= sqrt( dxyz(:,1).^2 + dxyz(:,2).^2 +dxyz(:,3).^2 ) ;
     dSave(Inds) =d ;
-
+    
 end
-    A3byNaLL=  transpose(ProvaConf(:,1:3)) ;  
-    B3byNaLL=  transpose(TargeConf(:,1:3) );
+A3byNaLL=  transpose(ProvaConf(:,1:3)) ;
+B3byNaLL=  transpose(TargeConf(:,1:3) );
 
-    [regParamsaLL,~,~]=absor(B3byNaLL,A3byNaLL);
-    b_prime = transpose(regParamsaLL.R*B3byNaLL + regParamsaLL.t  );
-    plot3k({b_prime(:,1) , b_prime(:,2) ,b_prime(:,3)}, 'ColorData',dSave ,'ColorRange',[min(dSave), max(dSave)] ) ;   
-%      plot3k({TargeConf(:,1) , TargeConf(:,2) ,TargeConf(:,3)}, 'ColorData',dSave ,'ColorRange',[min(dSave), max(dSave)] ) ;   
-    str={strcat('mean d = ',num2str(mean(dSave))) ;  strcat('min= ',num2str(min(dSave),3)  ,' max= ',num2str(max(dSave),3 )) } ;
-    title( str  );
+[regParamsaLL,~,~]=absor(B3byNaLL,A3byNaLL);
+b_prime = transpose(regParamsaLL.R*B3byNaLL + regParamsaLL.t  );
+plot3k({b_prime(:,1) , b_prime(:,2) ,b_prime(:,3)}, 'ColorData',dSave ,'ColorRange',[min(dSave), max(dSave)] ) ;
+%      plot3k({TargeConf(:,1) , TargeConf(:,2) ,TargeConf(:,3)}, 'ColorData',dSave ,'ColorRange',[min(dSave), max(dSave)] ) ;
+str={strcat('mean d = ',num2str(mean(dSave))) ;  strcat('min= ',num2str(min(dSave),3)  ,' max= ',num2str(max(dSave),3 )) } ;
+title( str  );
 fprintf('End of Compute Deform, Bundle By bundle\n')
 
 end

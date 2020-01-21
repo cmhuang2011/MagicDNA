@@ -16,8 +16,8 @@ function  LegendBoxing_ReadPoints( src,evn,axMain )
                'Right click to make a green node.';
                'Add a line between the red and green nodes by clicking the button.';
                'When done, click ''Send to Sketch''.' ;
-               
-
+               '';
+               '[h]: watch tutorial movie.';
               
                
                } ;

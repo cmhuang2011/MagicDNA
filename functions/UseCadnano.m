@@ -3,6 +3,7 @@ function UseCadnano(src,evn)
 %   Detailed explanation goes here
 
 sdfsf=2;
+fprintf('start of UseCadnano\n')  ;
 
 ss_Assembly= findobj(gcf,'Tag','ss_Assembly') ;
 GetHyperB= ss_Assembly.UserData.HyperBundle ;
@@ -33,23 +34,43 @@ for k=1:length(StapCornerC4)
     CornerC4 =StapCornerC4{k} ;
     CornerC5=CornerC4 ;
     [a,b]=ismember(CornerC4(:,1),GetHyperB.RelateTable(:,4) ) ;    
+%     b
     CornerC5(:,1) = GetHyperB.RelateTable(b,5) ;
     NewStpList{k} =CornerC5;
 end
 %--------------
 %------convert scaf C4 to C12
 
-CornerC4 =ScafCornerC4{1} ;
+[aa,~]=cellfun(@size,ScafCornerC4 ) ;
+
+% if sum(aa<= 6)>0
+%     ExtendScaf=[];
+%     UpdateClosingStrand = ScafCornerC4(aa<= 6)  ;
+%     for k= 1:length(UpdateClosingStrand)
+%     ExtendScaf=[ExtendScaf;UpdateClosingStrand{k}];
+%     end
+%     GetHyperB.ClosingStrand.ExtendScaf = ExtendScaf ; % update for cadnanoinitial, 
+% end
+
+
+ScafCornerC4=ScafCornerC4(aa> 6)    ;   % hard code to exclude modification of closing strand
+GetHyperB.ScafRouting= cell(length(ScafCornerC4),1) ;
+GetHyperB.Scaf_fromJSON= cell(length(ScafCornerC4),1) ;
+
+for k = 1 : length(ScafCornerC4)
+CornerC4 =ScafCornerC4{k} ;
 CornerC5= [zeros(size(CornerC4,1),1) ,CornerC4 ];
 [a,b]=ismember(CornerC4(:,1),GetHyperB.RelateTable(:,4) ) ;
 CornerC5(:,1:2) = GetHyperB.RelateTable(b,1:2) ;
 NewScaf =CornerC5;
-GetHyperB.ScafRouting =  NewScaf ;   % update
-GetHyperB.Scaf_fromJSON= NewScaf ;
+GetHyperB.ScafRouting{k} =  NewScaf ;   % update
+GetHyperB.Scaf_fromJSON{k}= NewScaf ;
+end
+
 ConvertScafG(GetHyperB);
 ConvertScafSQ(GetHyperB);      % Get properties:ScafdigitSQ
 ConvertScafHC(GetHyperB);      % Get properties:ScafdigitHC
-GetHyperB.plotScafR_cylindermodel(1) ;       
+% GetHyperB.plotScafR_cylindermodel(1) ;       
 % NewScaf= 
 %---------------
 

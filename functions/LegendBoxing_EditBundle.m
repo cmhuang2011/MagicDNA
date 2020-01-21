@@ -20,10 +20,16 @@ function  LegendBoxing_EditBundle( src,evn,axMain )
                'Use keyboard left or right arrow to move the selected nodes(red).';
                '2D and 3D nodes are synchronized. Change step size by "Ctrl" or "Shift".' ;
                '';
+               '2D cylinder view :';
+               '(1) For specifying internal crossovers, use the popups next to the buttons to select one cylinder or a pair of cylinder. The available crossovers from the cylinder or between these two cylinder will be shown. Click the desired one and press [x] to turn it into \color{red}\bf bold red \color{black}\rm as saved.';
+               '(2) For ignore crossovers along a portion of bundle, drag the cursor and click [z] to extend the range to two sides with inputs.' ;
+               'These two above operations can be canceled by right clicks.  '
+               '';
                'Cross-section view :';
                '(1) Measure the distance between two cylinders on cross-section by clicking.' ;
                '(2) Zoom in 3D model to see the scaffold orientation.' ;
                '(3) If users want to change the cylinder pairing(scaffold loops), select two pairing lines and press ''Enter''. ';
+               '(4) For ignore all crossovers between two cylinders, use left/right click on the circle between cylinders. \color{red}Red \color{black}means no crossover.  ';
                '';
                'Viewing box:'; 
                'Use MATLAB default icons to rotate or zoom in/out globally. ' ;
@@ -34,11 +40,14 @@ function  LegendBoxing_EditBundle( src,evn,axMain )
                '[E][D] = +- Z direction \bf{(Not for 2D and cross-section view)}\rm'  ;
                'Lower cases or left clicks on the bottom half: Shifting(- or +) the limit in the corresponding direction.' ; 'Upper cases or middle clicks on the bottom half: Expand(+)/shrink(-) the limit in the corresponding direction. '    
                '';
-
-               '[x]: axis equal \bf{(recommended for 3D panel and cross-section)}\rm';
-               '[X]: axis auto ';
+               
+               'Keys:';
+               '[x][X]: Add forced internal crossovers. '
+               '[o]: axis equal \bf{(recommended for 3D panel and cross-section)}\rm';
+               '[O]: axis auto ';
                '[n][N]: axis normal \bf{(recommended for 2D panel)}\rm';
                '[p]: print current view under directory.';       '';
+               '[h]: watch tutorial movie.';
                '\color{red}\fontsize{16}\bf{Need to update the entire mechanism(Use ''Add/Remove'' button in Assembly tab without adding or removing bundles) after editing all bundles!!}\rm ';
                
                } ;

@@ -1,4 +1,4 @@
-function ExportLineToChimera( h_plot,varargin )
+function ExportScatterToChimera( h_plot,varargin )
 %UNTITLED4 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -6,7 +6,7 @@ function ExportLineToChimera( h_plot,varargin )
 
 fprintf('printing surface models for Chimera.\n')
 if nargin==1
-    file_name='Routing_stap' ;
+    file_name='Scatter_fromMATLAB' ;
 else
     file_name=varargin{1} ;
 end
@@ -23,11 +23,20 @@ for  k = 1:length(h_plot)
 %      fprintf(fileID ,'.color %4.2f %4.2f %4.2f\n',  [0 0 0] );
 %      fprintf(fileID , '.marker  %4.2f %4.2f %4.2f\n',XYZ(1,:)')    ;
     
-    if strcmp(get(h_plot(k), 'Type') ,'line')
-        fprintf(fileID ,'.color %4.2f %4.2f %4.2f\n',  h_plot(k).Color );
-%          fprintf(fileID ,'.color %4.2f %4.2f %4.2f\n', [0.2,0.8,0.3]);
-       
-        Radius =0.6 ;
+    if strcmp(get(h_plot(k), 'Type') ,'scatter')
+        fprintf(fileID ,'.color %4.2f %4.2f %4.2f\n',  h_plot(k).CData );
+        %          fprintf(fileID ,'.color %4.2f %4.2f %4.2f\n', [0.2,0.8,0.3]);
+        
+        switch h_plot(k).SizeData
+            case 86
+                Radius = 0.3 ;
+            case 36
+                Radius = 0.3 ;
+            case 6
+                Radius = 0.1 ;
+            otherwise
+                Radius = 0.2 ;
+        end
     else
         Radius =0.1;
          fprintf(fileID ,'.color %4.2f %4.2f %4.2f\n',  rand(1,3) );
@@ -35,7 +44,7 @@ for  k = 1:length(h_plot)
     
     
     for Bi = 1:size(XYZ ,1)-1   %
-        fprintf(fileID , '.cylinder %4.2f %4.2f %4.2f %4.2f %4.2f %4.2f %4.2f open\n',XYZ(Bi,:)',XYZ(Bi+1,:)',Radius )    ;
+%         fprintf(fileID , '.cylinder %4.2f %4.2f %4.2f %4.2f %4.2f %4.2f %4.2f open\n',XYZ(Bi,:)',XYZ(Bi+1,:)',Radius )    ;
         
         fprintf(fileID , '.sphere %4.2f %4.2f %4.2f %4.2f \n',XYZ(Bi,:)',Radius )    ;
     end

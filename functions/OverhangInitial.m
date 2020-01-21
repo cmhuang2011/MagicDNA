@@ -122,7 +122,7 @@ src.String='Clear';
 t=findobj(gcf,'Tag','OHTable'); 
 t.Data=''; t.UserData='';
 t.CellEditCallback=@(src,evn)UpdateConn(src,evn) ;
-t.Position(2)=0.25;
+% t.Position(2)=0.25;
 % t.CellSelectionCallback=@(src,evn)CellSelection(src,evn) ;
 % t.ButtonDownFcn =@(src,evn)btDown(src,evn) ;
             h1 = light('Position',[-100 100 100],'Style','infinite'); h2 = light('Position',[20 -20 20],'Style','infinite');
@@ -131,7 +131,7 @@ xlabel('X') ; ylabel('Y') ; zlabel('Z') ;
 end
 
 function ApplyAll(src,evn)
-t=findobj(0,'Tag','OHTable'); 
+t=findobj(gcf,'Tag','OHTable'); 
 if ~isempty(t.Data)
     if size(t.Data ,1 )>2
        for k=2: size(t.Data ,1 )
@@ -268,7 +268,7 @@ end
 end
 
 function CancelOH(src,evn,ax)
-t=findobj(0,'Tag','OHTable'); 
+t=findobj(gcf,'Tag','OHTable'); 
 BAori=     [ones(1,3); 0.94*ones(1,3)] ;
     IndsValid= cellfun(@isempty,ax.UserData.Conn); IndsValid=find(~IndsValid );
     for k=1:length(IndsValid)
@@ -323,7 +323,7 @@ end
 
 function UpdateConn(src,evn) 
 if  evn.Indices(2)==3  % only for chaning enabability
-    ax= findobj(0,'Tag','MechOH3D');
+    ax= findobj(gcf,'Tag','MechOH3D');
     Conn=ax.UserData.Conn;
     for kk=1: size(src.Data,1)
          if src.Data{kk,3}==0
@@ -336,7 +336,7 @@ if  evn.Indices(2)==3  % only for chaning enabability
 end
 
 if  evn.Indices(2)==9  % only for chaning enabability
-    ax= findobj(0,'Tag','MechOH3D');
+    ax= findobj(gcf,'Tag','MechOH3D');
     Conn=ax.UserData.Conn;
     for kk=1: size(src.Data,1)
          if src.Data{kk,9}==0

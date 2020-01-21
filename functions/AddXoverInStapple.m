@@ -6,18 +6,42 @@ CrossCyls=union(StapXover(:,1),StapXover(:,1));
 ZPosition=mean(union(StapXover(:,2),StapXover(:,2)));
 whichstrands=[]    ;          %find out Xover between which two strands
 CorrLoation=[];
+% whichstrands2=[]    ;          %find out Xover between which two strands
+% CorrLoation2=[];
+
+
 NStrands=StappStrands;
 for cellindex=1:size(StappStrands,1)
    TemMat=StappStrands{cellindex};
-   for ScanInMat=1:size(TemMat,1)-1
-       LastP=TemMat(ScanInMat,:);
-       NextP=TemMat(ScanInMat+1,:)   ;    
-       if LastP(1)==NextP(1) && ismember(LastP(1),CrossCyls) && (LastP(2)-ZPosition)*(NextP(2)-ZPosition)<0          
-           whichstrands=[whichstrands cellindex]    ;
-           CorrLoation=[CorrLoation ScanInMat];
-       end      
-   end   
+%    for ScanInMat=1:size(TemMat,1)-1
+%        LastP=TemMat(ScanInMat,:);
+%        NextP=TemMat(ScanInMat+1,:)   ;    
+%        if LastP(1)==NextP(1) && ismember(LastP(1),CrossCyls) && (LastP(2)-ZPosition)*(NextP(2)-ZPosition)<0          
+%            whichstrands=[whichstrands cellindex]    ;
+%            CorrLoation=[CorrLoation ;ScanInMat];
+%        end      
+%    end   
+   
+   S1 = TemMat(1:end-1,1) ==TemMat(2:end,1)  ;
+   S2 = ismember( TemMat(1:end-1,1),CrossCyls)   ;
+   S3 =  ( TemMat(1:end-1,2)-ZPosition).*(TemMat(2:end,2)-ZPosition)<0         ;
+   
+   if sum(and(and(S1,S2),S3) )>0
+%        sdfsf=3 ;
+       whichstrands=[whichstrands cellindex]    ;
+       CorrLoation=[CorrLoation; find(and(and(S1,S2),S3))];
+   end
+       
+ 
 end
+% whichstrands
+% whichstrands2
+% CorrLoation
+% CorrLoation2
+% if sum(whichstrands~=whichstrands2)>0  || sum(CorrLoation~=CorrLoation2)>0 
+% sdsf=2
+% end
+
 NoOfBreakStrand=length(intersect(whichstrands,whichstrands));
 
 switch NoOfBreakStrand

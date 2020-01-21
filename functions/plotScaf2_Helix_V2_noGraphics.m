@@ -5,7 +5,10 @@ function varargout=plotScaf2_Helix_V2_noGraphics( GetHyperB,CornerNotation,Issta
 %   V2: removed old helix function. Assume all use overhang's function to
 %   get helix
 
-SacfR=GetHyperB.ScafRouting ;
+SacfR=GetHyperB.ScafRouting{1} ;
+for k = 2 : length(GetHyperB.ScafRouting)
+ SacfR= [SacfR ; GetHyperB.ScafRouting{k}    ] ;
+end
 MaxBase=max(SacfR(:,3));
 
 skipPattern1=9:60:MaxBase;   % skip mod2 =0   %test 4/20

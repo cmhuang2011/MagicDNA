@@ -17,21 +17,20 @@ function  LegendBoxing_Stap( src,evn,axMain )
                '''Use cadnano'' button is for manually change the routing in caDNAno with the json file \bfwhich was exported from MagicDNA.\rm';
                'Please load the json file while the corresponding MagicDNA design is loaded.';
                '\bfLimitation: \rm';
-               '1. The json file should only have \color{red}one scaffold strand \color{black}with a break. ';
-               '2. Staple strands can be pre-cut or modified in caDNAno but must have 3'' and 5'' ends.';
-               '3. Do not change the helices indexes(Rnum) in caDNAno.' ;
-               '4. If with suitable operations after modification, some preliminary analysis will show up in the command line, which means both scaffold and staples have been updated. '
+               '1. Scaffold and staple strands can be cut, added Xovers, or modified in caDNAno but must have 3'' and 5'' ends (breaks).';
+               '2. Do not change the helices indexes(Rnum) in caDNAno.' ;
+               '3. If with suitable operations after modification, some preliminary analysis will show up in the command line, which means both scaffold and staples have been updated. '
                 '';
                'Viewing box:'; 'Use MATLAB default icons to rotate or zoom in/out globally.' ;
                'Whenever use the keybroad to interact, \bfremember to cancel rotate/zoom mode!!\rm ';
                'x y z limits can be changed inividually by keys,[Q][W][E][A][S][D](case sensitive).'; 
                '[Q][A] = +- X direction ' ; '[W][S] = +- Y direction '; '[E][D] = +- Z direction '  ;'Lower cases: Shifting(- or +) the limit in the corresponding direction.' ; 'Upper cases: Expand(+)/shrink(-) the limit in the corresponding direction. '    
-
+               
                '';
                '[x]: axis equal ';
                '[X]: axis auto ';
                '[p]: print current view under directory. ';
-
+               '[h]: watch tutorial movie.';
                
                } ;
                                  

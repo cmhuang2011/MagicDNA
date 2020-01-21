@@ -20,8 +20,8 @@ function  LegendBoxing_SketchStep1( src,evn,axMain )
                'When done, click ''finish''' ;
                
 
-              
-               
+              '';
+               '[h]: watch tutorial movie.'
                } ;
                                  
                       f = msgbox(STR ,'Instructions', 'help' ,CreateStruct);    

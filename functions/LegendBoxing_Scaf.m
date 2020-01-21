@@ -15,8 +15,14 @@ function  LegendBoxing_Scaf( src,evn,axMain )
            STR={'\fontsize{11}Click \bf{GetScaffoldRouting}\rm button to obtain a scaffold routing.'  ;
                'The algorithm gives a new routing according to how users specified geometry and assembly.';
                'Routing results are different each time.';
-               'Before doing this step, the mechanism must be assembled with desired lengths of ssDNA scaffold in Assembly tab.';
-               '';              
+               'Before doing this step, the mechanism must be assembled with desired lengths of ssDNA scaffold in Assembly and ssScaf tabs.';
+               '';
+               '\fontsize{11}Click \bf{MultiScaf}\rm button to split \bfone\rm long scaffold into N cycles by applying N-1 Xovers.'  ;
+               'This is a stochastic method to find the Xovers satisfying the lenth constraints.'
+               'This means the process may not be successful and requires multiple trials. '
+               'Default setting is to use the specified N and percentage for the lower and upper bounds, which can be changed in the file \bffunctions/SplitScafToMultiScaf.m.\rm'
+               
+               '';
                'Viewing box:'; 'Use MATLAB default icons to rotate or zoom in/out globally.' ;
                'Whenever use the keybroad to interact, \bfremember to cancel rotate/zoom mode!!\rm ';
                'x y z limits can be changed inividually by keys,[Q][W][E][A][S][D](case sensitive).'; 
@@ -26,7 +32,7 @@ function  LegendBoxing_Scaf( src,evn,axMain )
                '[x]: axis equal ';
                '[X]: axis auto ';
                '[p]: print current view under directory. ';
-
+               '[h]: watch tutorial movie.' ;
                } ;
                                  
                       f = msgbox(STR ,'Instructions', 'help' ,CreateStruct);    

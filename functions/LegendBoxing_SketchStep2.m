@@ -33,7 +33,7 @@ function  LegendBoxing_SketchStep2( src,evn,axMain )
                '[x]: axis equal ';
                '[X]: axis auto ';
                '[p]: print current view under directory. ';
-               
+               '[h]: watch tutorial movie.'
                } ;
                                  
            f = msgbox(STR ,'Instructions', 'help' ,CreateStruct);    

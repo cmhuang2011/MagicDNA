@@ -4,8 +4,17 @@ function varargout=plotScaf2_Helix( GetHyperB,CornerNotation  )
 %Use in: cadnano and oxDNA panels
 %   Detailed explanation goes here
 
-SacfR=GetHyperB.ScafRouting ;
+% SacfR=GetHyperB.ScafRouting ;
+% MaxBase=max(SacfR(:,3));
+
+SacfR=GetHyperB.ScafRouting{1} ;
+for k = 2 : length(GetHyperB.ScafRouting)
+ SacfR= [SacfR ; GetHyperB.ScafRouting{k}    ] ;
+end
+
 MaxBase=max(SacfR(:,3));
+
+
 
 skipPattern1=9:60:MaxBase;   % skip mod2 =0   %test 4/20
 skipPattern2=39:60:MaxBase;

@@ -1,4 +1,4 @@
-function  LegendBoxing_Stap( src,evn,axMain )
+function  LegendBoxing_OH( src,evn,axMain )
 %UNTITLED3 Summary of this function goes here
 %   Detailed explanation goes here
 % axMain.UserData
@@ -32,6 +32,7 @@ function  LegendBoxing_Stap( src,evn,axMain )
                '[x]: axis equal ';
                '[X]: axis auto ';
                '[p]: print current view under directory. ';
+               '[h]: watch tutorial movie.';
                } ;
                                  
                f = msgbox(STR ,'Instructions', 'help' ,CreateStruct);    

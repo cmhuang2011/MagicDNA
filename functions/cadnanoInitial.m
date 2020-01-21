@@ -1,9 +1,9 @@
-function cadnanoInitial( src,evn,jsonSlider1,jsonSlider2,jsonPop )
+function cadnanoInitial( src,evn,jsonSlider1,jsonSlider2,jsonPop ,jsonPop2)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 % clc
 % profile on
-
+% profile on  % last optimized, 08/26/2019
 
 tic;
 fH=gcf;
@@ -39,22 +39,88 @@ axes(ax2) ; ax2.UserData.NoZ=1 ;
 [plotH,HeadTail]=DrawStapp3(GetHyperB.StapList3,GetHyperB,1,ax2,[]) ;            % 2D staple
 % HeadTail: handle of [text] [scatter] [scatter] [text]
 
-TurbulanceColor= 0.1*rand(length(GetHyperB.containBundle),3) + 0*ones(length(GetHyperB.containBundle),3 ) ;  %
-CC=  get(groot,'defaultAxesColorOrder') ; CC(1,:)=[];
-CC =repmat(CC ,ceil(length(GetHyperB.containBundle)/size(CC,1) ),1 ) ;
-CC=CC(1:length(GetHyperB.containBundle) ,: );
-BundleColorForStaples=CC+TurbulanceColor ; BundleColorForStaples(BundleColorForStaples>1)=1;
-
-for k=1:length(GetHyperB.StapList3 )
-    HeadC5Cylinder =GetHyperB.StapList3{k}(1,1) ;
-    BundleInd = unique(GetHyperB.RelateTable( GetHyperB.RelateTable(:,5)==HeadC5Cylinder ,1   ) ) ;
-    
-    % plotH{k}
-    plotH{k}.Color = BundleColorForStaples(BundleInd,: ) ;  % bundle's staples color
-    plotH{k}.HitTest='off' ;
+answer2 = questdlg('How to color the staples?', ...
+    'Staple Color', ...
+    'By 5'' in bundles','By Staple graph','By 5'' in bundles');
+UseStapleGraph = 0;
+switch answer2
+    case 'By 5'' in bundles'
+        TurbulanceColor= 0.1*rand(length(GetHyperB.containBundle),3) + 0*ones(length(GetHyperB.containBundle),3 ) ;  %
+        CC=  get(groot,'defaultAxesColorOrder') ; CC(1,:)=[];
+        CC =repmat(CC ,ceil(length(GetHyperB.containBundle)/size(CC,1) ),1 ) ;
+        CC=CC(1:length(GetHyperB.containBundle) ,: );
+        BundleColorForStaples=CC+TurbulanceColor ; BundleColorForStaples(BundleColorForStaples>1)=1;
+        
+        for k=1:length(GetHyperB.StapList3 )
+            HeadC5Cylinder =GetHyperB.StapList3{k}(1,1) ;
+            BundleInd = unique(GetHyperB.RelateTable( GetHyperB.RelateTable(:,5)==HeadC5Cylinder ,1   ) ) ;
+            plotH{k}.Color = BundleColorForStaples(BundleInd,: ) ;  % bundle's staples color
+            plotH{k}.HitTest='off' ;
+        end
+        h_bingraph=[];
+    case 'By Staple graph'
+        UseStapleGraph=1 ;
+        [ h_bingraph,Graph,ST_list ]= GetHyperB.FindStapGraph ;
+        axes(ax2);
+        bins =  conncomp(Graph,'OutputForm','vector','Type','weak') ;
+        %         [edgebins,iC] = conncomp(Graph,'Type','weak')
+        edgebinsWeak = conncomp(Graph,'OutputForm','cell','Type','weak') ;
+        ST =ST_list;
+        [table2array(Graph.Edges) , ST_list]; SSSTTT=table2array(Graph.Edges) ;
+        EdgeGroups = zeros(size(ST,1 ) ,1) ;
+        for k = 1 : length(GetHyperB.StapList3 )
+            [EdgeInd,~] = find(ST==k) ;
+            if isempty(EdgeInd)
+            else
+                %                 length(EdgeInd)>1
+                EdgeIndOne= EdgeInd(1) ;
+                Onenode =  ST(EdgeIndOne,1) ;
+                EdgeGroups(EdgeIndOne) =  bins(Onenode) ;
+                %             else
+            end
+        end
+        h_bingraph.EdgeCData =EdgeGroups;
+        h_bingraph.LineWidth =2;
+        ST2=[ST ,  bins(ST(:,1))', bins(ST(:,2))'  , bins(SSSTTT(:,1))', bins(SSSTTT(:,2))' ] ;
+        h_bingraph.UserData.Graph=   Graph ;
+        
+        
+        TurbulanceColor= 0.2*rand(max(bins),3) + 0*ones(max(bins),3 ) ;  %
+        CC=  get(groot,'defaultAxesColorOrder') ; CC(1,:)=[];
+        CC =repmat(CC ,ceil(max(bins)/size(CC,1) ),1 ) ;
+        CC=CC(1:max(bins) ,: );
+        BinsColorForStaples=CC+TurbulanceColor ;
+        BinsColorForStaples(BinsColorForStaples>1)=1;
+        
+        EdgesColors = zeros(length(EdgeGroups),3) ;
+        for k=1: max(bins)  % index of Group
+            NodesInThisGroup = edgebinsWeak{k} ;
+            EdgeList = table2array(Graph.Edges) ;
+            
+            
+            IndEdge1 = ismember( EdgeList(:,1),NodesInThisGroup) ; %find(IndEdge1)
+            
+            EdgesColors(IndEdge1,:) = ones(sum(IndEdge1),1) *BinsColorForStaples(k,:);
+        end
+        
+        h_bingraph.EdgeColor =EdgesColors;
+        for bi = 1:max(bins)
+            Staps =  find(bins==bi) ;
+            if length(Staps)==1
+                plotH{Staps}.Color =[0.8,0.8,0.8] ;  % single staple color
+                plotH{Staps}.HitTest='off' ;
+            else
+                for k=1: length(Staps)
+                    plotH{Staps(k)}.Color =BinsColorForStaples(bi,:) ;  % single staple color
+                    plotH{Staps(k)}.HitTest='off' ;
+                end
+            end
+        end
+        h_bingraph.ButtonDownFcn=@(src,evn)StapGraphButtonDown(src,evn) ;
 end
+% return
 
-sdsf=3;
+
 % ax2=findobj(0,'Tag','json2D')
 for k=1:length(plotH); plotH{k}.HitTest='off' ; end
 % for k=1:length(HeadTail); HeadTail{k}.HitTest='off' ; end
@@ -64,111 +130,137 @@ for k=1:length(plotH); plotH{k}.HitTest='off' ; end
 % return
 
 %------2D scaffold
-CellMat= GetHyperB.scafC5;
-BaseRoute = interpolateBase( CellMat ) ;
-% CellMat = interpolateBase( CellMat ) ;   % test 
+surfH= cell( length( GetHyperB.scafC5), 1)  ;  % scaffold 2D surf graphic handles in cell
+ScafForScatterAll = []; ScafForScatterAllSpacing= [] ;
+ScafForScatterIndividual = cell( length( GetHyperB.scafC5), 1)  ;  %scaffold 2D surf graphic handles in cell, later inserting spacing ~= C5 
 
-ScafForScatter= setdiff(BaseRoute , skipBase,'rows' ,'stable') ;  %C5 notation
-
-ScafForScatterOri=ScafForScatter ;  % save 2D scaffould base routing without spacing
+for scaf_j = 1 : length( GetHyperB.scafC5)
+    CellMat= GetHyperB.scafC5{scaf_j} ;
+    BaseRoute = interpolateBase( CellMat ) ;
+    % CellMat = interpolateBase( CellMat ) ;   % test
+    
+    ScafForScatter= setdiff(BaseRoute , skipBase,'rows' ,'stable') ;  %C5 notation
+    if scaf_j==1
+        ScafForScatterAll=   ScafForScatter ;
+    else
+        ScafForScatterAll=   [ScafForScatterAll; ScafForScatter] ;
+    end
+    
+    
+    ScafForScatterOri=ScafForScatter ;  % save 2D scaffould base routing without spacing
     [~,IndC5] = ismember( ScafForScatter(:,1) ,GetHyperB.RelateTable(:,5) ) ;
     IndB = GetHyperB.RelateTable(IndC5,1) ;
     IndB(GetHyperB.RelateTable(IndC5,2)==-1 )= length(GetHyperB.containBundle)+1 ;
-    ScafForScatter(:,1 ) =  ScafForScatter(:,1 )  + (IndB-1)*2 ;  % insert spacing
-
-
-
+    ScafForScatter(:,1 ) =  ScafForScatter(:,1 )  + (IndB-1)*2 ;  % insert spacing , here insert spacing so ~= C5
+    ScafForScatterIndividual{scaf_j} = ScafForScatter ;
+    if scaf_j==1
+        ScafForScatterAllSpacing=   ScafForScatter ;
+    else
+        ScafForScatterAllSpacing=   [ScafForScatterAllSpacing; ScafForScatter] ;
+    end
+    
     [~,IndC5] = ismember( CellMat(:,1) ,GetHyperB.RelateTable(:,5) ) ;
     IndB = GetHyperB.RelateTable(IndC5,1) ;
     IndB(GetHyperB.RelateTable(IndC5,2)==-1 )= length(GetHyperB.containBundle)+1 ;
     CellMat(:,1 ) =  CellMat(:,1 )  + (IndB-1)*2 ;
-
-m=size(CellMat,1)/2;
-xxc=zeros(6*m-4,1);
-yyc=zeros(6*m-4,1);
-mi=0;
-%             xxc(1)=CellMat(1,2);
-%             yyc(1)=5*CellMat(1,1);
-for tt=1:size(CellMat,1)-1
-    %      fff=mod(tt,2);
-    if CellMat(tt,1)== CellMat(tt+1,1); fcase=1 ;
-    elseif  CellMat(tt,2)== CellMat(tt+1,2); fcase=2 ;
-    else;   fcase=3 ;
-    end
     
-    
-    switch fcase
-        case 1    %horizontal points
-            mi=mi+1;
-            xxc(mi)=CellMat(tt,2);
-            yyc(mi)=5*CellMat(tt,1)-1  ;
-        case 2    %vertical points
-            CC=[5*CellMat(tt,1) ,5*CellMat(tt+1,1)];
-            delta=0.1*abs(CC(1)-CC(2));
-            JJ= xor((CellMat(tt-1,2)>CellMat(tt,2)),(CC(1)>CC(2)));
-            if JJ==true
-                amp=(1.1)^delta;
-            else
-                amp=-(1.1)^delta;
-            end
-            dy=linspace( CC(1),CC(2),5);
-            dx=amp*sin(pi/abs(CC(1)-CC(2)).*(dy-CC(1)) );
-            
-            xxc(mi+1:mi+5)=  CellMat(tt,2)-dx   ;
-            yyc(mi+1:mi+5)=  dy-1;
-            mi=mi+5;
-        case 3
-            CC=[5*CellMat(tt,1) ,5*CellMat(tt+1,1)];
-            dy=linspace( CC(1),CC(2),5);
-            xxc(mi+1:mi+5)= linspace( CellMat(tt,2),CellMat(tt+1,2),5);
-            yyc(mi+1:mi+5)=  dy-1;
-            mi=mi+5;
-            
+    m=size(CellMat,1)/2;
+    xxc=zeros(6*m-4,1);
+    yyc=zeros(6*m-4,1);
+    mi=0;
+    %             xxc(1)=CellMat(1,2);
+    %             yyc(1)=5*CellMat(1,1);
+    for tt=1:size(CellMat,1)-1
+        %      fff=mod(tt,2);
+        if CellMat(tt,1)== CellMat(tt+1,1); fcase=1 ;
+        elseif  CellMat(tt,2)== CellMat(tt+1,2); fcase=2 ;
+        else;   fcase=3 ;
+        end
+        
+        
+        switch fcase
+            case 1    %horizontal points
+                mi=mi+1;
+                xxc(mi)=CellMat(tt,2);
+                yyc(mi)=5*CellMat(tt,1)-1  ;
+            case 2    %vertical points
+                CC=[5*CellMat(tt,1) ,5*CellMat(tt+1,1)];
+                delta=0.1*abs(CC(1)-CC(2));
+                JJ= xor((CellMat(tt-1,2)>CellMat(tt,2)),(CC(1)>CC(2)));
+                if JJ==true
+                    amp=(1.1)^delta;
+                else
+                    amp=-(1.1)^delta;
+                end
+                dy=linspace( CC(1),CC(2),5);
+                dx=amp*sin(pi/abs(CC(1)-CC(2)).*(dy-CC(1)) );
+                
+                xxc(mi+1:mi+5)=  CellMat(tt,2)-dx   ;
+                yyc(mi+1:mi+5)=  dy-1;
+                mi=mi+5;
+            case 3
+                CC=[5*CellMat(tt,1) ,5*CellMat(tt+1,1)];
+                dy=linspace( CC(1),CC(2),5);
+                xxc(mi+1:mi+5)= linspace( CellMat(tt,2),CellMat(tt+1,2),5);
+                yyc(mi+1:mi+5)=  dy-1;
+                mi=mi+5;
+                
+        end
     end
+    %     toc
+    mi=mi+1; %CellMat
+    xxc(mi)=CellMat(end,2);
+    yyc(mi)=5*CellMat(end,1)-1;
+    xxc=xxc(1:mi) ; yyc=yyc(1:mi) ;
+    % % % % plot(xxc,yyc,'-*' )
+    x=xxc' ; y=yyc' ; z =zeros(size(y)) ;
+    % % % x= CellMat(:,2)' ; y= 5*CellMat(:,1)' -1 ;  z =zeros(size(y)) ;
+    
+    % x=
+    %     col = (1:length(xxc))*1000;  % This is the color
+    col = ((1:length(xxc))-1)/( length(xxc)-1);  % This is the color
+    
+    surfH{scaf_j}=surface([x;x],[y;y],[z;z],[col;col] ,'facecol','no', 'edgecol','interp','LineWidth',1.5    );
+    % surfH=surface([x;x],[y;y],[z;z],[col;col],'LineStyle',':' ,'facecol','no', 'edgecol','interp','LineWidth',1  );
+    
+    surfH{scaf_j}.HitTest= 'off' ;
 end
-toc
-mi=mi+1;
-xxc(mi)=CellMat(end,2);
-yyc(mi)=5*CellMat(end,1)-1;
-xxc=xxc(1:mi) ; yyc=yyc(1:mi) ; 
-% % % % plot(xxc,yyc,'-*' )
-x=xxc' ; y=yyc' ; z =zeros(size(y)) ;
-% % % x= CellMat(:,2)' ; y= 5*CellMat(:,1)' -1 ;  z =zeros(size(y)) ;
+% GetHyperB.ScafAllBase = ScafForScatterIndividual; % adapt to multi-scaffold
 
-% x=
-col = (1:length(xxc))*1000;  % This is the color
-surfH=surface([x;x],[y;y],[z;z],[col;col] ,'facecol','no', 'edgecol','interp','LineWidth',1.5    );
-% surfH=surface([x;x],[y;y],[z;z],[col;col],'LineStyle',':' ,'facecol','no', 'edgecol','interp','LineWidth',1  );
 
-surfH.HitTest= 'off' ;
+sH =scatter(ScafForScatterAllSpacing(:,2),5*ScafForScatterAllSpacing(:,1),54 ,'s' ,'filled','Tag','sH') ;
+sH.UserData.SFC= ScafForScatterAll ;
 
-sH =scatter(ScafForScatter(:,2),5*ScafForScatter(:,1),54 ,'s' ,'filled','Tag','sH') ;
-sH.UserData.SFC= ScafForScatterOri ;
-
-ScafForScatter=ScafForScatterOri ;
-SFC_C4notation = ScafForScatterOri ;
+% ScafForScatterAll=ScafForScatterOri ;
+SFC_C4notation = ScafForScatterAll ;
 SFC_C4notation(:,1)= GetHyperB.RelateVec( SFC_C4notation(:,1)) ;
 sH.UserData.SFC_C4notation = SFC_C4notation ;
 sH.MarkerFaceColor='none' ;
 sH.UserData.GetHyperB = GetHyperB ;
 
+% sdfsf=3
 %------scaf234556...., closing strand
 if strcmp(GetHyperB.UserWantOH,'Yes')
     
     WWW=GetHyperB.ClosingStrand.ExtendScaf ;
-    
-%     [~,IndC5] = ismember( WWW(:,1) ,GetHyperB.RelateTable(:,5) ) ;
-%     IndB = GetHyperB.RelateTable(IndC5,1) ;
-%     IndB(GetHyperB.RelateTable(IndC5,2)==-1 )= length(GetHyperB.containBundle)+1 ;
-%     WWW(:,1 ) =  WWW(:,1 )  + (IndB-1)*2 ;    
+    WWW(end+1:end+2,:) =[-1 -1;-1 -1] ;
+    %     [~,IndC5] = ismember( WWW(:,1) ,GetHyperB.RelateTable(:,5) ) ;
+    %     IndB = GetHyperB.RelateTable(IndC5,1) ;
+    %     IndB(GetHyperB.RelateTable(IndC5,2)==-1 )= length(GetHyperB.containBundle)+1 ;
+    %     WWW(:,1 ) =  WWW(:,1 )  + (IndB-1)*2 ;
     
     
     CornerNotation=cell(length(GetHyperB.ClosingStrand.ConnScaf2),1) ;   % for closing strand
     Scaf2H=cell(size(CornerNotation) ) ;
+  
+    
     for k=1:length(GetHyperB.ClosingStrand.ConnScaf2)
         Conn =GetHyperB.ClosingStrand.ConnScaf2{k} ;
         [ ~,ind1] =ismember(Conn(1,:) ,GetHyperB.ClosingStrand.ExtendScaf , 'rows') ;
         [ ~,ind2] =ismember(Conn(2,:) ,GetHyperB.ClosingStrand.ExtendScaf , 'rows')    ;
+        if ind1==0 ; ind1= size(WWW,1)-1 ;end
+        if ind2==0 ; ind2= size(WWW,1)-1 ;end
+        
         if mod(ind1,2)==0 && mod(ind2,2)==0 %not sure
             EE=[WWW(ind2-1,:) ; WWW(ind2,:) ;  WWW(ind1-1,:) ; WWW(ind1,:)];
             
@@ -183,18 +275,36 @@ if strcmp(GetHyperB.UserWantOH,'Yes')
             %     EE=[WWW(ind2,:) ; WWW(ind2+1,:) ;  WWW(ind1,:) ; WWW(ind1+1,:)];
             
         end
+        EE= EE(EE(:,1)~=-1 ,:) ;
+        
         
         %    EE=[WWW(ind2-1,:) ; WWW(ind2,:) ;  WWW(ind1,:) ; WWW(ind1+1,:)];
+        CornerNotation{k} = EE  ;
         
-        [~,IndC5] = ismember( EE(:,1) ,GetHyperB.RelateTable(:,5) ) ;
+        if isempty(EE); continue;end
+        
+        %-----single extension
+        if EE(end,2)==EE(end-1,2)
+            EE=EE(1:end-2,:) ;
+        elseif EE(1,2)==EE(2,2)
+            EE=EE(3:end,:) ;
+        end
+        %------------
+        
+        [~,IndC5] = ismember( EE(:,1) ,GetHyperB.RelateTable(:,5) ) ;  % spacing
         IndB = GetHyperB.RelateTable(IndC5,1) ;
         IndB(GetHyperB.RelateTable(IndC5,2)==-1 )= length(GetHyperB.containBundle)+1 ;
-          CornerNotation{k} = EE  ;
-        
         EE(:,1 ) =  EE(:,1 )  + (IndB-1)*2 ;
+        %         CornerNotation{k} = EE  ;
         
-%         CornerNotation{k} = EE  ;
+        if size(unique(EE,'rows') ,1)==1
+            EE=[nan nan];
+        end
+        %         if size(unique(EE,'rows') ,1)~=1
         Scaf2H{k} = plot( EE(:,2),5*EE(:,1) -1,  'k','HitTest','off') ;
+        %         else
+        
+        %         end
         scatter(EE(1,2),5*EE(1,1) -1 ,'ks','filled','HitTest','off');
         
     end
@@ -207,26 +317,31 @@ axis normal ;
 % %----------3D
 axes(ax);
 
-surfH3D=GetHyperB.plotScafR_cylindermodelAllBase ; surfH3D.HitTest= 'off' ;
+surfH3D = cell( length( GetHyperB.scafC5), 1)  ;  % scaffold 3D surf graphic handles in cell
+for k = 1 : length(surfH3D)
+    surfH3D{k}=GetHyperB.plotScafR_cylindermodelAllBase(1, k) ; surfH3D{k}.HitTest= 'off' ;
+end
 
 % surfH3D=GetHyperB.plotScafR_cylindermodel ;
 
-BaseScafR3DXYZ =GetHyperB.plotScafR_BaseByBase(ScafForScatter) ;
+BaseScafR3DXYZ =GetHyperB.plotScafR_BaseByBase(ScafForScatterAll) ;
 sH3D=scatter3(BaseScafR3DXYZ(:,1) ,BaseScafR3DXYZ(:,2) ,BaseScafR3DXYZ(:,3),54,'s','filled','Tag','sH3D') ;
 sH3D.MarkerFaceColor='none' ;
 
 
 Isstap=0 ;  TM=1 ;
-% [pScaf2,ScafHelix,pScaf_center,ScafBaseCenterHelix ,NVecscaf,scafBundleRout ]=plotScaf2_Helix_V2( GetHyperB,{GetHyperB.scafC5},Isstap ,[0,0,1] ,TM ) ;     % plot scaf strands 
+% [pScaf2,ScafHelix,pScaf_center,ScafBaseCenterHelix ,NVecscaf,scafBundleRout ]=plotScaf2_Helix_V2( GetHyperB,{GetHyperB.scafC5},Isstap ,[0,0,1] ,TM ) ;     % plot scaf strands
 
-[ScafHelixXYZ,ScafBasesCenter  ]=plotScaf2_Helix_V2_noGraphics( GetHyperB,{GetHyperB.scafC5},Isstap ,[0,0,1] ,TM ) ;     % get scaf strands coordinate
+[ScafHelixXYZ,ScafBasesCenter  ]=plotScaf2_Helix_V2_noGraphics( GetHyperB,GetHyperB.scafC5,Isstap ,[0,0,1] ,TM ) ;     % get scaf strands coordinate
 % return
-BVec = ScafHelixXYZ{1}-ScafBasesCenter{1} ; d_Bvec= sqrt(BVec(:,1).^2+BVec(:,2).^2+BVec(:,3).^2 ) ; RR = mean(d_Bvec) ;
-BVec = BVec/RR; 
-% h_quiver = quiver3( surfH3D.XData(1,:)', surfH3D.YData(1,:)', surfH3D.ZData(1,:)',BVec(:,1),BVec(:,2),BVec(:,3)) ; 
-
-surfH3D.UserData.CylRep=[surfH3D.XData(1,:)',surfH3D.YData(1,:)',surfH3D.ZData(1,:)'] ;
-surfH3D.UserData.BVec=BVec ;
+for k = 1 : length(surfH3D)
+    BVec = ScafHelixXYZ{k}-ScafBasesCenter{k} ; d_Bvec= sqrt(BVec(:,1).^2+BVec(:,2).^2+BVec(:,3).^2 ) ; RR = mean(d_Bvec) ;
+    BVec = BVec/RR;
+    % h_quiver = quiver3( surfH3D.XData(1,:)', surfH3D.YData(1,:)', surfH3D.ZData(1,:)',BVec(:,1),BVec(:,2),BVec(:,3)) ;
+    
+    surfH3D{k}.UserData.CylRep=[surfH3D{k}.XData(1,:)',surfH3D{k}.YData(1,:)',surfH3D{k}.ZData(1,:)'] ;
+    surfH3D{k}.UserData.BVec=BVec ;
+end
 JsonTxt_scaf.UserData.Mode=1 ;
 JsonTxt_scaf.ButtonDownFcn = @(src,evn)JsonTxt_scafButtonDown(src,evn,surfH3D,sH3D) ;
 % return
@@ -235,9 +350,24 @@ JsonTxt_scaf.ButtonDownFcn = @(src,evn)JsonTxt_scafButtonDown(src,evn,surfH3D,sH
 Isstap=1 ;  TM=1 ;
 [pStapleH,StapHelix,pStap_center,StapBaseCenterHelix ,NVecstap,stapBundleRout ]=plotScaf2_Helix_V2( GetHyperB,GetHyperB.StapList3,Isstap ,[1,0,0] ,TM ) ; % plot 3D staple strands
 
-
+CornerNotation2=cell(size(CornerNotation)) ;
 if strcmp(GetHyperB.UserWantOH,'Yes')
-    pScaf2H=plotScaf2_Helix( GetHyperB ,CornerNotation ) ;    
+    for k=1:length( CornerNotation)
+        EE=    CornerNotation{k} ;
+        if isempty(EE);continue;end
+        
+        if EE(end,2)==EE(end-1,2)
+            EE=EE(1:end-2,:) ;
+            
+        elseif EE(1,2)==EE(2,2)
+            EE=EE(3:end,:) ;
+        end
+        if size(unique(EE,'rows') ,1)==1
+            EE=[];
+        end
+        CornerNotation2{k}=EE ;
+    end
+    pScaf2H=plotScaf2_Helix( GetHyperB ,CornerNotation2 ) ;
 else
     pScaf2H=[];
 end
@@ -252,17 +382,16 @@ for k=1:length(pStapleH)   % 3D staple
 end
 
 for k=1:length(pStapleH)   % 3D staple
-pStapleH{k}.UserData.HelicalRep_XYZ = [pStapleH{k}.XData',  pStapleH{k}.YData',pStapleH{k}.ZData' ];
-BVec = StapHelix{k}-StapBaseCenterHelix{k} ; d_Bvec= sqrt(BVec(:,1).^2+BVec(:,2).^2+BVec(:,3).^2 ) ; RR = mean(d_Bvec) ;
-BVec = BVec/RR; 
-  
-pStapleH{k}.UserData.BVec=BVec ;
-pStapleH{k}.HitTest = 'off' ;
+    pStapleH{k}.UserData.HelicalRep_XYZ = [pStapleH{k}.XData',  pStapleH{k}.YData',pStapleH{k}.ZData' ];
+    BVec = StapHelix{k}-StapBaseCenterHelix{k} ; d_Bvec= sqrt(BVec(:,1).^2+BVec(:,2).^2+BVec(:,3).^2 ) ; RR = mean(d_Bvec) ;
+    BVec = BVec/RR;
+    
+    pStapleH{k}.UserData.BVec=BVec ;
+    pStapleH{k}.HitTest = 'off' ;
 end
 JsonTxt_stap.UserData.Mode=1 ;
 JsonTxt_stap.ButtonDownFcn = @(src,evn)JsonTxt_stapButtonDown(src,evn,pStapleH) ;
 
-sdfsf=3;
 %--------------3D
 
 
@@ -272,7 +401,7 @@ jsonSlider2.Callback=@(src,evn)staple2DChange(src,evn,plotH,pStapleH) ;
 jsonPop.Callback=@(src,evn)labelChange(src,evn,HeadTail) ;
 sH.ButtonDownFcn =@(src,evn)HighLightBase(src,evn,sH3D) ;
 sH3D.ButtonDownFcn =@(src,evn)HighLightBase3D(src,evn,sH) ;
-ax2.UserData.PlottedScafR = GetHyperB.ScafRouting ; 
+ax2.UserData.PlottedScafR = GetHyperB.ScafRouting ;
 jsonPop.Value = 4;
 labelChange(jsonPop,'',HeadTail) ;
 jsonSlider2.Value = 0.4 ;
@@ -283,6 +412,15 @@ scaffold2DChange(jsonSlider1,'',surfH,surfH3D) ;
 btn2.Callback= @(src,evn)exportjson(src,evn,GetHyperB) ;
 btn3.Callback= @(src,evn)exportCSV(src,evn) ;
 
+Str={'--'};
+for k=1:length(GetHyperB.scafC5) ;  Str{k}=strcat('Scaffold-',num2str(k),'(', num2str(size(ScafForScatterIndividual{k} ,1) ),')' );    end
+Str{k+1}= 'Show all scaffolds' ;
+jsonPop2.String = Str; jsonPop2.Value = k+1;
+jsonPop2.Callback=@(src,evn)ShowHideScaf(src,evn,surfH3D,surfH) ;
+
+
+
+
 uistack(sH,'top');
 uistack(sH3D,'top');
 
@@ -292,41 +430,85 @@ uistack(sH3D,'top');
 % profile viewer
 % return ; %
 
-list = {'p7249','p7560','p7704', 'p8064','other' ,'randomScaf'};
-strShow = strcat('Select scaffold , Current Scaf length =', num2str(size(ScafForScatter,1 )),'. Containing non-ATCG cause random Scaf seq '  ) ;
-fprintf(strcat(' Current Scaf length =', num2str(size(ScafForScatter,1 )),'\n') ) ; 
-[indx,tf] = listdlg('PromptString',strShow,'ListString',list,'SelectionMode','single' ,'ListSize', [400,200]);
-if tf ==1
-    switch indx
-        case 1
-            pSeq = p7249 ;
-        case 2
-            pSeq = p7560 ;
-        case 3
-            pSeq = p7704 ;
-        case 4
-            pSeq = p8064 ;
-        case 5
-            pSeq = inputdlg('Enter custom sequence:','scaffold', [1 50]) ;
-            pSeq= pSeq{1};
-            isATCG = or(or(or(ismember(pSeq,'A') , ismember(pSeq,'T')) , ismember(pSeq,'C') ),ismember(pSeq,'G'))  ;
-            if sum(isATCG)~=length(isATCG)
-                pSeq= randseq(length(isATCG)) ;
-                fprintf( 'Entering wrong seqence, use random sequence instead  \n')
-            end
-        case 6
-            pSeq=   randseq(size(ScafForScatter,1)) ;
-            
+GetHyperB.pSeq= [] ;
+GetHyperB.pSeqExt= [];
+for scaf_j = 1 : length( GetHyperB.scafC5)
+    
+    for k = 1 : length(surfH3D)
+        surfH3D{k}.Visible ='off';
+        surfH{k}.Visible ='off';
     end
-    GetHyperB.pSeq=pSeq;
-end
+    surfH3D{scaf_j}.Visible ='on';
+    surfH{scaf_j}.Visible ='on';    
+    
+    %     UIControl_FontSize_bak = get(0, 'DefaultUIControlFontSize');  %
+    %     change default fontsize and turn it back
+    %     set(0, 'DefaultUIControlFontSize', 18);
+    %     set(0, 'DefaultUIControlFontSize', UIControl_FontSize_bak);
+    %
+        
+    list = {'p7249','p7560','p7704', 'p8064', 'pCS3_L_7560', 'pCS4_7557', 'pCS5_7559' ,'other' ,'randomScaf'};
+    strShow = strcat('Select scaffold(',num2str(scaf_j) ,'/', num2str(length( GetHyperB.scafC5)),')',' Current Scaf length =', num2str(size(ScafForScatterIndividual{scaf_j},1 )),'. Containing non-ATCG cause random Scaf seq '  ) ;
+    fprintf(strcat(' Current Scaf length =', num2str(size(ScafForScatterIndividual{scaf_j},1 )),'\n') ) ;
+    
+    opt.Resize = 'on';
+    opt.Interpreter='tex' ;
+    %     str = strcat('Current long Scaf ~= ' , num2str(NBaseOri) ,' bp' ) ;
+    %     str= ['\fontsize{10}' str newline  'Specify the numbers of piceses to cut: ' ];
+    
+    UIControl_FontSize_bak = get(0, 'DefaultUIControlFontSize');
+    set(0, 'DefaultUIControlFontSize', 14); 
+    % insdati = menu('Can you please help me?','Yes','No')
+    
+    opts.Interpreter = 'tex';
+    [indx,tf] = listdlg('PromptString',strShow,'ListString',list,'SelectionMode','single' ,'ListSize', [500,250] );
+    set(0, 'DefaultUIControlFontSize', UIControl_FontSize_bak);
 
-if length(pSeq)< size(ScafForScatter,1 )
-    pSeqExt=[pSeq, randseq( size(ScafForScatter,1 )-length(pSeq) ) ] ;   %
-    GetHyperB.pSeqExt=pSeqExt;
-    %     GetHyperB.pSeq=pSeqExt;
-end
+    if tf ==1
+        switch indx
+            case 1
+                pSeq = p7249 ;
+            case 2
+                pSeq = p7560 ;
+            case 3
+                pSeq = p7704 ;
+            case 4
+                pSeq = p8064 ;
+                
+            case 5
+                pSeq = pCS3_L_7560 ;
+            case 6
+                pSeq = pCS4_7557 ;
+            case 7
+                pSeq = pCS5_7559 ;
+                
+            case 8
+                pSeq = inputdlg('Enter custom sequence:','scaffold', [1 50]) ;
+                pSeq= pSeq{1};
+                isATCG = or(or(or(ismember(pSeq,'A') , ismember(pSeq,'T')) , ismember(pSeq,'C') ),ismember(pSeq,'G'))  ;
+                if sum(isATCG)~=length(isATCG)
+                    pSeq= randseq(length(isATCG)) ;
+                    fprintf( 'Entering wrong seqence, use random sequence instead  \n')
+                end
+            case 9
+                pSeq=   randseq(size(ScafForScatterIndividual{scaf_j},1)) ;
+                
+        end
+        GetHyperB.pSeq{scaf_j}=pSeq(1 : size(ScafForScatterIndividual{scaf_j},1 ));
+    end
+    
+    if length(pSeq)< size(ScafForScatterIndividual{scaf_j},1 )
+        pSeqExt=[pSeq, randseq( size(ScafForScatterIndividual{scaf_j},1 )-length(pSeq) ) ] ;   %
+        GetHyperB.pSeqExt{scaf_j}=pSeqExt;
+        %     GetHyperB.pSeq=pSeqExt;
+    end
+    
+end  % muti scaffold
 
+for k = 1 : length(surfH3D)
+    surfH3D{k}.Visible ='on';
+    surfH{k}.Visible ='on';
+end
 
 % pSeq;
 %     strOO='<html><body bgcolor="#HHHHHH">Hello</body></html>' ;
@@ -336,54 +518,75 @@ end
 %
 %      GetHyperB.RelateTable
 % end
-[~,ik] =ismember(ScafForScatter(:,1) ,GetHyperB.RelateTable(:,5)) ;
-SCafBundleR_withSkip=GetHyperB.RelateTable(ik,1) ;
+% [~,ik] =ismember(ScafForScatter(:,1) ,GetHyperB.RelateTable(:,5)) ;
+% SCafBundleR_withSkip=GetHyperB.RelateTable(ik,1) ;
 
 
 
-
-ScafForScatter;
+pSeqAll= GetHyperB.pSeqAll ;
+ScafForScatter; ScafForScatterAll;
 StapSeq = cell( length( GetHyperB.StapList3) ,6 ) ;
 StapAllBaaeCell=  cell( length( GetHyperB.StapList3) ,1 ) ;
-ScafUnUsed= 1:size(ScafForScatter,1)   ;   % ssScaf includes connections and scaffold loops
+ScafUnUsed= 1:size(ScafForScatterAll,1)   ;   % ssScaf includes connections and scaffold loops
+
+StapOnWhichScaf =zeros(length( GetHyperB.StapList3) , length( GetHyperB.scafC5) )  ; % matrix form
+
+[MultiScafLength,~  ]=cellfun(@size,ScafForScatterIndividual) ;
+accMultiScafLengths = cumsum(MultiScafLength) ;
+accMultiScafLength1=[1; accMultiScafLengths(1:end-1) ];
+
+
+  btn4.Enable='off';
 for k= 1:length( GetHyperB.StapList3)
     CornerRout = GetHyperB.StapList3{k} ;
     BaseR_notyet =interpolateBase(  CornerRout )  ;
     StapBaseR= setdiff(BaseR_notyet , skipBase,'rows' ,'stable') ;  %C5 notation
     
-    [tf,indbase ] = ismember(StapBaseR ,ScafForScatter, 'rows' ) ;
+    [tf,indbase ] = ismember(StapBaseR ,ScafForScatterAll, 'rows' ) ;  %C5
     ScafUnUsed=setdiff(ScafUnUsed,indbase) ;
     if sum( tf==0)>0
-        fprintf(' has single stranded staple bases, sequence unknown, strand %i \n  ' ,k)
+        fprintf(' has single stranded staple bases, sequence unknown, strand %i  ' ,k)
         btn4.Enable='on';
-        
+        indbaseOri =indbase ;
         indbase(indbase==0)=1 ;
-        if max(indbase)> length(pSeq)
+        if max(indbase)> length(pSeqAll)
             QQ=seqcomplement(pSeqExt(indbase) ) ;
             QQ(tf==0)='?' ;
-            QQ(indbase>length(pSeq)) = '*' ;
+            QQ(indbase>length(pSeqAll)) = '*' ;
             fprintf(' scaffold length is not enough, strand %i \n  ' ,k)
         else
-            QQ=seqcomplement(pSeq(indbase) ) ;
+            CylindesForSSstap  = StapBaseR(:,1) ;
+            [~ ,bCyl] = ismember(CylindesForSSstap ,  GetHyperB.RelateTable(:,5) ) ;
+%             GetHyperB.RelateTable(:,2)~=-1
+            IsFakeCyls=   GetHyperB.RelateTable(bCyl,2)==-1;
+            QQ=seqcomplement(pSeqAll(indbase) ) ;
+         
             QQ(tf==0)='?' ;
+            QQ(and(IsFakeCyls==0,tf==0)   ) ='T' ;       % know it's located on cylinders from cylinder model, not pseudo cylinder due to staple overhang.
+            
+            if sum(QQ=='?')>0 
+                fprintf(' Detect non-paired staple bases on pseudo-cylinder(Not from cylinder model) . May due to overhang.  ' ) 
+            else
+                fprintf(' Detect non-paired staple bases on cylinder model. May due to PolyT (Force them to T).  ' )  
+            end            
         end
-        
-    elseif  max(indbase)>length(pSeq)
+          fprintf('\n')
+    elseif  max(indbase)>length(pSeqAll)
         
         QQ=seqcomplement(pSeqExt(indbase) ) ;
-        QQ(indbase>length(pSeq)) = '*' ;
+        QQ(indbase>length(pSeqAll)) = '*' ;
         fprintf(' scaffold length is not enough, strand %i \n  ' ,k)
         
     else
-        QQ=seqcomplement(pSeq(indbase) ) ;
+        QQ=seqcomplement(pSeqAll(indbase) ) ;
         
         
         
     end
     %     k
-    %     StapSeq{k,3} =  seqcomplement(pSeq(indbase) ) ;  
+    %     StapSeq{k,3} =  seqcomplement(pSeq(indbase) ) ;
     StapSeq{k,3} = QQ ;
-       
+    
     StartP =[GetHyperB.RelateVec(CornerRout(1,1)) ,  CornerRout(1,2) ] ;
     EndP =[GetHyperB.RelateVec(CornerRout(end,1)) ,  CornerRout(end,2) ] ;
     
@@ -395,17 +598,31 @@ for k= 1:length( GetHyperB.StapList3)
     rgbZero2One =  pStapleH{k}.Color ;   % staple color code
     
     Scale256 = rgbZero2One* 255 ;
-    HexCode=strcat( dec2hex(round(Scale256(1)),2) , dec2hex(round(Scale256(2)),2) , dec2hex(round(Scale256(3)),2 )   ) ;        
+    HexCode=strcat( dec2hex(round(Scale256(1)),2) , dec2hex(round(Scale256(2)),2) , dec2hex(round(Scale256(3)),2 )   ) ;
     %     StapSeq{k,5} = num2str(size(StapBaseR,1)) ;   % color
-    StapSeq{k,5} =HexCode;    
+    StapSeq{k,5} =HexCode;
     t_json.BackgroundColor(k,:) = rgbZero2One ;
     StapAllBaaeCell{k} =StapBaseR ;
-
+    
+    %     BelongScaf = indbase'>accMultiScafLength(1) ;
+    
+    BelongScaf = sum(and( (indbase-accMultiScafLength1')>0, (indbase-accMultiScafLengths')<0)   )>0 ;
+    %     if k== length( GetHyperB.StapList3)-1
+    %         fsdf=23
+    %     end
+    
+    StapOnWhichScaf(k,BelongScaf ) =1 ;
+    StapSeq{k,6} = strcat('Scaf : ',' ' ,num2str(find( BelongScaf ) )  ) ;
+  
 end
-GetHyperB.ScafAllBase = ScafForScatter;
+% GetHyperB.ScafAllBase = ScafForScatterIndividual; % adapt to
+% multi-scaffold % move to forward for better debugging
+
 GetHyperB.StapAllBase = StapAllBaaeCell;
 GetHyperB.ScafUnUsed = ScafUnUsed;
 QQ=GetHyperB.ScafUnUsed ;
+
+
 
 if ~isempty(QQ) % if have saved overhangs sequences , July 3 2019
     dQQ =diff(QQ)~=1;
@@ -414,7 +631,7 @@ if ~isempty(QQ) % if have saved overhangs sequences , July 3 2019
     HeadTail=[Head;Tails] ;
     UnUsedSeq= cell(size(HeadTail,2) ,1) ;
     for k=1: length(UnUsedSeq)
-        UnUsedSeq{k}=GetHyperB.pSeq(HeadTail(1,k):HeadTail(2,k)) ;
+        UnUsedSeq{k}=pSeqAll(HeadTail(1,k):HeadTail(2,k)) ;
     end
     GetHyperB.ScafUnUsedSeq = UnUsedSeq ;
 end
@@ -430,13 +647,14 @@ LL= cellfun(@length,StapAllBaaeCell) ; StapL_Thres = 10 ;
 % %---------------
 
 
-btn4.Callback= @(src,evn)overhangSeq(src,evn,StapSeq,CornerNotation,GetHyperB,ScafForScatter,Scaf2H) ;
+btn4.Callback= @(src,evn)overhangSeq(src,evn,StapSeq,CornerNotation,GetHyperB,ScafForScatterAll,Scaf2H) ;
 sdfsf=3;
 % btn3.Cal
 t_json.Data =StapSeq;
 t_json.UserData.BeforeOHSeq =StapSeq ;
 t_json.UserData.TablePrevClick = [-1,-1];
-t_json.CellSelectionCallback = @(src,evn)tabelSelectHighLight(src,evn,pStapleH,plotH,pScaf2H,Scaf2H, jsonSlider2) ;
+t_json.CellSelectionCallback = @(src,evn)tabelSelectHighLight(src,evn,pStapleH,plotH,pScaf2H,Scaf2H, jsonSlider2,h_bingraph ) ;
+
 % t_json. ButtonDownFcn=@(sr,evn)tabelButton(src,evn) ;
 % t_json.CellEditCallback= @(src,evn)tabelButton(src,evn,pStapleH,plotH) ;
 
@@ -447,9 +665,10 @@ fprintf('finish  initial cadnano \n') ;
 toc
 
 % setGOfontsize( gctab , 10 , {'UIControl'} )  % set fontsize for uicontrol in this tab
-figure(25);clf;
+f25=figure(25);clf;
+ f25.Name='Staple length distribution' ; set(f25,'NumberTitle','off');
 histogram(LL,1:1:max(LL));
-title(strcat('Staple length distribution. # of strands=' ,num2str(length(LL))  ) )
+title(strcat('Staple length distribution. # of strands=' ,num2str(length(LL)), ' Tol. Base=',num2str(sum(LL))  ) ) ;
 
 IndTooLong =find(LL> 60) ;
 for k=1:length(IndTooLong)
@@ -484,27 +703,53 @@ end
 axes(ax);
 
 %------------------------Instruction and legend
-            hLg= legend([surfH3D,pStapleH{1}],'1','2','Location','northwest' ) ; 
-            hLg.String={'\bfscaffold (index \bf\color[rgb]{0.24,0.15,0.66}Start 5'' \color{black}to \color[rgb]{0.78,0.78,0.18}End 3''\rm\color{black})','\bfstaples (other colors) '};
-            hLg.Interpreter='tex';        %latex
-            hLg.Orientation='vertical';
+hLg= legend([surfH3D{1},pStapleH{1}],'1','2','Location','northwest' ) ;
+hLg.String={'\bfscaffold (index \bf\color[rgb]{0.24,0.15,0.66}Start 5'' \color{black}to \color[rgb]{0.78,0.78,0.18}End 3''\rm\color{black})','\bfstaples (other colors) '};
+hLg.Interpreter='tex';        %latex
+hLg.Orientation='vertical';
 %             ForLegend.Marker='.' ; ForLegend.Marker='none';
-            hLg.ButtonDownFcn=@(src,evn)LegendBoxing_cadnano( src,evn,ax );
-            hLg.Title.String='Click me for instructions' ;
-            hLg.Units='normalized'; %hLg.AutoUpdate ='off';
-            hLg.Position=[0.0063 0.9528 0.1569 0.0387];
+hLg.ButtonDownFcn=@(src,evn)LegendBoxing_cadnano( src,evn,ax );
+hLg.Title.String='Click me for instructions' ;
+hLg.Units='normalized'; %hLg.AutoUpdate ='off';
+hLg.Position=[0.0063 0.9528 0.1569 0.0387];
 %------------------------
+if UseStapleGraph ==1
+    h_bingraph.ButtonDownFcn=@(src,evn)StapGraphButtonDown(src,evn,t_json,  pStapleH,  plotH ,jsonSlider2) ;
+end
+% profile viewer
+opts.Interpreter = 'tex';
+opts.Default = 'No';
+ answer = questdlg('\fontsize{15} Inspect Scaffold and Staple routing mapping ?'  , ...
+                'Inspect or not?', ...
+                'Yes','No',opts);
+ if strcmp(answer ,'Yes')           
+GetHyperB.InspectRouting(t_json,  pStapleH,  plotH ,jsonSlider2);
+ end
+ 
+ fprintf('End of preview  \n') ;
+ 
+end
 
-
-
-
+function ShowHideScaf(src,evn,surfH3D,surfH)
+for k = 1 : length(surfH3D)
+    surfH3D{k}.Visible ='off';
+    surfH{k}.Visible ='off';
+end
+if src.Value >length(surfH3D)
+    for k = 1 : length(surfH3D)
+        surfH3D{k}.Visible ='on';
+        surfH{k}.Visible ='on';
+    end
+else
+    surfH3D{ src.Value}.Visible ='on';
+    surfH{ src.Value}.Visible ='on';
+end
 end
 
 
-
 function overhangSeq(src,evn,StapSeq,CornerNotation,GetHyperB,ScafForScatter,Scaf2H)
-t_json=findobj(0,'Tag','t_json') ;
-t_OH=findobj(0,'Tag','OHTable');  CompareCol=[2,5,6,7,8] ; IsSame=true;
+t_json=findobj(gcf,'Tag','t_json') ;
+t_OH=findobj(gcf,'Tag','OHTable');  CompareCol=[2,5,6,7,8] ; IsSame=true;
 FirstRow = {t_OH.Data{1,2}, t_OH.Data{1,5},  t_OH.Data{1,6}, t_OH.Data{1,7}, t_OH.Data{1,8}} ;
 for coli=2:size(t_OH.Data,1)
     NextRow =  {t_OH.Data{coli,2}, t_OH.Data{coli,5},  t_OH.Data{coli,6}, t_OH.Data{coli,7}, t_OH.Data{coli,8}} ;
@@ -526,15 +771,15 @@ opts.Default = 'random generate';
 skipBase= GetHyperB.skipBase ;
 
 if ~isempty(GetHyperB.SeqsOfClosing)
-str='Closing Strand Seq '  ;
-answerClosingSeq = questdlg('Found Closing Strand Seq. Do you want to use it ?',str, ...
-    'Yes','OverWrite' ,'Yes');
+    str='Closing Strand Seq '  ;
+    answerClosingSeq = questdlg('Found Closing Strand Seq. Do you want to use it ?',str, ...
+        'Yes','OverWrite' ,'Yes');
 else
-   answerClosingSeq='OverWrite' ; 
+    answerClosingSeq='OverWrite' ;
 end
 
 
-if strcmp(answerClosingSeq,'OverWrite')    
+if strcmp(answerClosingSeq,'OverWrite')
     switch IsSame
         case false
             answer = questdlg({'\fontsize{15} Overhangs detected!! How would you like for overhangs ?','Overhang data is not identical.' }  , ...
@@ -554,13 +799,28 @@ if strcmp(answerClosingSeq,'OverWrite')
             OtherOverhangs=[];
             for k =1: length(CornerNotation)
                 Corn=  CornerNotation{k};
+                if isempty(Corn) ; continue; end
+                
                 %-------old, random sequences
                 %             BaseByBase =interpolateBase(  Corn )  ;
                 %             RandSeq = randseq(size(BaseByBase,1)) ;
                 %-----------------------------------
-                [OneOverHang1,~]=getOverSeq_ssScaf( abs(diff(Corn(1:2,2)))+1 ,OtherOverhangs,ssScaf,EntireScaf) ;
+                if  abs(diff(Corn(1:2,2)))+1==1  % single entesion
+                    OneOverHang1='';
+                else
+                    [OneOverHang1,~]=getOverSeq_ssScaf( abs(diff(Corn(1:2,2)))+1 ,OtherOverhangs,ssScaf,EntireScaf) ;
+                end
                 OtherOverhangs=[string(OtherOverhangs); string(OneOverHang1 )] ;
-                [OneOverHang2,~]=getOverSeq_ssScaf( abs(diff(Corn(3:4,2)))+1 ,OtherOverhangs,ssScaf,EntireScaf) ;
+                if size(Corn,1)==4
+                    if abs(diff(Corn(3:4,2)))+1==1  % single entesion
+                        OneOverHang2= '';
+                    else
+                        [OneOverHang2,~]=getOverSeq_ssScaf( abs(diff(Corn(3:4,2)))+1 ,OtherOverhangs,ssScaf,EntireScaf) ;
+                    end
+                else
+                    OneOverHang2='';
+                end
+                
                 OtherOverhangs=[string(OtherOverhangs); string(OneOverHang2 )] ;
                 SeqsOfClosing{k} =  [OneOverHang1,OneOverHang2]  ;
                 %              SeqsOfClosing{k} = RandSeq   ;
@@ -591,7 +851,20 @@ if strcmp(answerClosingSeq,'OverWrite')
             
             for k =1: length(CornerNotation)
                 Corn=  CornerNotation{k};
-                BaseByBase =interpolateBase(  Corn )  ;
+                if ~isempty(Corn)
+                    if Corn(end,2)==Corn(end-1,2)   % single extension
+                        Corn=Corn(1:end-2,:) ;
+                    elseif Corn(1,2)==Corn(2,2)
+                        Corn=Corn(3:end,:) ;
+                    end
+                    if size(unique(Corn,'rows') ,1)==1
+                        continue;
+                    end
+                    
+                    BaseByBase =interpolateBase(  Corn )  ;
+                else
+                    BaseByBase=[];
+                end
                 Scaf2H{k}.Color=[1,0,0];
                 Scaf2H{k}.LineWidth =2 ;
                 str=strcat('\fontsize{12}#OH= ', num2str(k) ,'/',num2str(length(CornerNotation))  ,', Enter Seq,  N=', num2str(size(BaseByBase,1)),', highlighted as red, incorrect input will be randomly assigned')   ;
@@ -614,8 +887,8 @@ if strcmp(answerClosingSeq,'OverWrite')
             end
     end
     
-else  
-    SeqsOfClosing= GetHyperB.SeqsOfClosing; 
+else
+    SeqsOfClosing= GetHyperB.SeqsOfClosing;
 end
 
 
@@ -624,15 +897,29 @@ end
 % StapSeq = cell( length( GetHyperB.StapList3) ,6 ) ;
 ScafForScatter ;
 ScafForScatterExt=ScafForScatter ;
-if  length(GetHyperB.pSeq)>=size(ScafForScatter,1)
-    ExtScafseq = GetHyperB.pSeq(1:size(ScafForScatter,1)) ; %removed unused scaf, otherwise indexes mess up.
+[aScaf,bScaf] = cellfun(@size, GetHyperB.pSeq) ;
+if  length(GetHyperB.pSeqAll)>=size(ScafForScatter,1)
+    ExtScafseq = GetHyperB.pSeqAll(1:size(ScafForScatter,1)) ; %removed unused scaf, otherwise indexes mess up.
 else  %imported scaffold not enough
-    ExtScafseq = [GetHyperB.pSeq ,  randseq(size(ScafForScatter,1)-length(GetHyperB.pSeq) ) ] ; % add some ramdom scaffold, latter will be subs as *
+    ExtScafseq = [GetHyperB.pSeqAll ,  randseq(size(ScafForScatter,1)-length(GetHyperB.pSeqAll) ) ] ; % add some ramdom scaffold, latter will be subs as *
 end
 
 for k=1:length(CornerNotation)   %put closing strand sequence after used scaffold
-    Corn=  CornerNotation{k};
-    BaseByBase =interpolateBase(  Corn )  ;
+    EE=    CornerNotation{k} ;
+    if ~isempty(EE)
+        if EE(end,2)==EE(end-1,2)   % single extension
+            EE=EE(1:end-2,:) ;
+        elseif EE(1,2)==EE(2,2)
+            EE=EE(3:end,:) ;
+        end
+        if size(unique(EE,'rows') ,1)==1
+            EE=[] ;
+        end
+        BaseByBase =interpolateBase(  EE )  ;
+        
+    else % incase particularly add nicks by overhangs
+        BaseByBase=[];
+    end
     ScafForScatterExt=[ScafForScatterExt;BaseByBase];
     ExtScafseq=[ExtScafseq,SeqsOfClosing{k}] ;
 end
@@ -640,18 +927,32 @@ end
 % ScafForScatter;
 StapSeq = t_json.UserData.BeforeOHSeq ;
 for k= 1:length(StapSeq)
-    CornerRout = GetHyperB.StapList3{k} ;
+    k;
+    CornerRout = GetHyperB.StapList3{k}  ;
     BaseR_notyet =interpolateBase(  CornerRout )  ;
     StapBaseR= setdiff(BaseR_notyet , skipBase,'rows' ,'stable') ;  %C5 notation
     
     [tf,indbase ] = ismember(StapBaseR ,ScafForScatterExt, 'rows' ) ;
+    
+    
     if sum( tf==0)>0
-        fprintf('Should not happen !!! \n ')
-    else
+        indOri =indbase ;
+        indbase(indbase==0) = 1 ;
+        QQ=seqcomplement(ExtScafseq(indbase) ) ;
+        indExceedScaf = indbase > length(GetHyperB.pSeqAll) ;
+        indNotOverHang =  indbase <= size(ScafForScatter,1) ;
         
+        QQ(and(indExceedScaf,indNotOverHang )) ='*';
+        QQ(indOri==0) ='T';
+%         fprintf('Should not happen !!! \n ')
+         fprintf('Found single-stranded staple without scaffold, Not due to overhang. Assign These bases sequece as T (PolyT case). Strand = %i !!! \n ',k) ;
+    else
+        %         if k==44
+        %             sdf=3
+        %         end
         
         QQ=seqcomplement(ExtScafseq(indbase) ) ;
-        indExceedScaf = indbase > length(GetHyperB.pSeq) ;
+        indExceedScaf = indbase > length(GetHyperB.pSeqAll) ;
         indNotOverHang =  indbase <= size(ScafForScatter,1) ;
         QQ(and(indExceedScaf,indNotOverHang )) ='*';
         
@@ -669,6 +970,11 @@ t_json.BackgroundColor(nCell+1,:)  =[1,1,1] ;
 
 for k=1 : length(CornerNotation)
     Corn=  CornerNotation{k};
+    if isempty(Corn)
+        t_json.BackgroundColor(nCell+k+1,:)  =[0.7,0.7,0.7] ;
+        continue;
+    end
+    
     BaseByBase =interpolateBase(  Corn )  ;
     StartP =[GetHyperB.RelateVec(BaseByBase(1,1)) ,  BaseByBase(1,2) ] ;
     EndP =[GetHyperB.RelateVec(BaseByBase(end,1)) ,  BaseByBase(end,2) ] ;
@@ -691,7 +997,7 @@ end
 % movegui(d,'center')
 % txt = uicontrol('Parent',d,'Unit','normalized','Style','text',....
 %     'Position',[0.1 0.8 0.3 0.1], 'String','Click the close button when you''re done.');
-% 
+%
 % btn1 = uicontrol('Parent',d, 'Unit','normalized','Position',[0.1 0.2 0.1 0.1],....
 %     'String','1',  'Callback','delete(gcf)');
 % t_Seq = uitable('Parent',d, 'Unit','normalized','Position',[0.3 0.1 0.65 0.8],...
@@ -700,13 +1006,13 @@ end
 %     Corn=  CornerNotation{k};     BaseByBase =interpolateBase(  Corn )  ;
 %     t_Seq.Data{k,1} = size(BaseByBase,1)   ;
 % end
-% 
-% 
+%
+%
 % end
 
 
 function  exportCSV(src,evn)
-t_json=findobj(0,'Tag','t_json') ;
+t_json=findobj(gcf,'Tag','t_json') ;
 
 prompt = {'Enter File name:'};  dlg_title = 'Input';
 num_lines = 1;  defaultans = {'CSVfilename'};
@@ -732,11 +1038,11 @@ end
 % %     plotH{evn.Indices(1)}.Color = c ;
 % %     src.BackgroundColor(evn.Indices(1),:) =c ;
 % % src.Data{evn.Indices(1),evn.Indices(2)}='';
-% sdfsdf=3 
+% sdfsdf=3
 % end
 
 
-function   tabelSelectHighLight(src,evn,pStapleH,plotH,pScaf2H,Scaf2H,jsonSlider2 )
+function   tabelSelectHighLight(src,evn,pStapleH,plotH,pScaf2H,Scaf2H,jsonSlider2 ,h_bingraph )
 % src.UserData
 % evn.Indices
 src.UserData.SelectedCell= evn.Indices ;
@@ -746,7 +1052,7 @@ src.UserData.plotH= plotH ;
 if ~isempty(evn.Indices)
     selectStrand =  evn.Indices(1)  ;
     for k=1:length( pStapleH)
-        if k== selectStrand %%|| k==126 || k==12 
+        if k== selectStrand %%|| k==126 || k==12
             pStapleH{k}.LineWidth =5;        plotH{k}.LineWidth =5 ;
             pStapleH{k}.Color(4) = 1 ;      plotH{k}.Color(4) = 1 ;
         else
@@ -756,6 +1062,10 @@ if ~isempty(evn.Indices)
     end
     
     for k2=1:length( pScaf2H)  % closing strand
+        if  isempty( pScaf2H{k2})
+            continue ;
+        end
+        
         if k2+k+1 == selectStrand
             pScaf2H{k2}.LineWidth =4 ;        Scaf2H{k2}.LineWidth =4 ;
         else
@@ -765,20 +1075,62 @@ if ~isempty(evn.Indices)
     end
     src.UserData.prev=selectStrand;
     
-%     if evn.Indices(2)==5  &&   src.UserData.TablePrevClick(1)~=evn.Indices(1)  % select color column
-%         Sti =evn.Indices(1) ;
-%         c = uisetcolor ;
-%         pStapleH{Sti}.Color =c ;
-%         plotH{Sti}.Color =c ;
-%         src.BackgroundColor(Sti,:)=c ;
-%         Scale256 = c* 255 ;
-%         HexCode=strcat( dec2hex(round(Scale256(1)),2) , dec2hex(round(Scale256(2)),2) , dec2hex(round(Scale256(3)),2 )   ) ;
-% 
-%         src.Data{evn.Indices(1),5} = HexCode ;
-%         src.UserData.TablePrevClick = evn.Indices ;
-%     end
+    %     if evn.Indices(2)==5  &&   src.UserData.TablePrevClick(1)~=evn.Indices(1)  % select color column
+    %         Sti =evn.Indices(1) ;
+    %         c = uisetcolor ;
+    %         pStapleH{Sti}.Color =c ;
+    %         plotH{Sti}.Color =c ;
+    %         src.BackgroundColor(Sti,:)=c ;
+    %         Scale256 = c* 255 ;
+    %         HexCode=strcat( dec2hex(round(Scale256(1)),2) , dec2hex(round(Scale256(2)),2) , dec2hex(round(Scale256(3)),2 )   ) ;
+    %
+    %         src.Data{evn.Indices(1),5} = HexCode ;
+    %         src.UserData.TablePrevClick = evn.Indices ;
+    %     end
 end
-
+% evn.Indices
+if ~isempty(h_bingraph)  && ~isempty(evn.Indices)
+    h_bingraph.MarkerSize=3;
+    highlight(h_bingraph,evn.Indices(1));
+    
+    %-----
+    % sdfsf=3
+    h_bingraph.NodeLabel=[] ; % label cadnano starting point
+    edgebinsWeak = conncomp(h_bingraph.UserData.Graph,'OutputForm','cell','Type','weak') ;
+    edgesWeak = conncomp(h_bingraph.UserData.Graph,'OutputForm','vector','Type','weak') ;
+    Neighbors =  edgebinsWeak{edgesWeak(evn.Indices(1))}  ;
+    
+    QQ = distances(h_bingraph.UserData.Graph,Neighbors',Neighbors')  ;
+    QQ(QQ==Inf)=0 ;
+    max(max(QQ)) ;
+    [Start,End]=find(QQ==max(max(QQ))) ;
+%     P = shortestpath(h_bingraph.UserData.Graph,Neighbors(Start),Neighbors(End)) ;
+    P = shortestpath(h_bingraph.UserData.Graph,Neighbors(Start(1)),Neighbors(End(1))) ;
+    
+    Neighbors=P ;  % update order
+    % labelnode(h_bingraph,1:729,  cellstr(num2str([1:729]')) )
+    strs = src.Data(Neighbors,1) ;
+    LL = src.Data(Neighbors,4) ;
+    for k =1:length(strs)
+        strs{k} =strcat( strs{k}, ' L=',  LL{k}) ;
+    end
+    fprintf('\n')
+    for k=1:length(LL)-1
+        fprintf('%s -',LL{k}) ;
+    end
+    fprintf('%s',LL{length(LL)});
+    fprintf('\n')
+    
+    
+    for k=1:length(strs)
+        fprintf('|%s |',strs{k}) ;
+    end
+    fprintf('\n')
+    
+    
+    % labelnode(h_bingraph,Neighbors,strs) ;
+    
+end
 % if  evn.Indices(2) ==6
 %
 % %     sdfs=3
@@ -794,6 +1146,8 @@ end
 
 % sdfs=3 ;
 end
+
+
 
 
 % function HighLightBase(src,evn,sH3D)
@@ -836,28 +1190,30 @@ function labelChange(src,evn,HeadTail)
 k=1;
 switch src.Value
     case 1   % show num
-            set(HeadTail{1}, 'Visible','on') ;  set(HeadTail{4}, 'Visible','on') ;
-            HeadTail{2}.Visible ='off' ;
-            HeadTail{3}.Visible ='off' ;
+        set(HeadTail{1}, 'Visible','on') ;  set(HeadTail{4}, 'Visible','on') ;
+        HeadTail{2}.Visible ='off' ;
+        HeadTail{3}.Visible ='off' ;
     case 2 % show ends
-            set(HeadTail{1}, 'Visible','off') ;  set(HeadTail{4}, 'Visible','off') ;
-            HeadTail{2}.Visible ='on' ;
-            HeadTail{3}.Visible ='on' ;
+        set(HeadTail{1}, 'Visible','off') ;  set(HeadTail{4}, 'Visible','off') ;
+        HeadTail{2}.Visible ='on' ;
+        HeadTail{3}.Visible ='on' ;
     case 3 % both
-             set(HeadTail{1}, 'Visible','on') ;  set(HeadTail{4}, 'Visible','on') ;
-            HeadTail{2}.Visible ='on' ;
-            HeadTail{3}.Visible ='on' ;
+        set(HeadTail{1}, 'Visible','on') ;  set(HeadTail{4}, 'Visible','on') ;
+        HeadTail{2}.Visible ='on' ;
+        HeadTail{3}.Visible ='on' ;
     case 4 % none
-            set(HeadTail{1}, 'Visible','off') ;  set(HeadTail{4}, 'Visible','off') ;
-            HeadTail{2}.Visible ='off' ;
-            HeadTail{3}.Visible ='off' ;
+        set(HeadTail{1}, 'Visible','off') ;  set(HeadTail{4}, 'Visible','off') ;
+        HeadTail{2}.Visible ='off' ;
+        HeadTail{3}.Visible ='off' ;
 end
 end
 
 
 function scaffold2DChange(src,evn,surfH,surfH3D)
-surfH.EdgeAlpha=src.Value ;
-surfH3D.EdgeAlpha=src.Value ;
+for k = 1 : length(surfH)
+    surfH{k}.EdgeAlpha=src.Value ;
+    surfH3D{k}.EdgeAlpha=src.Value ;
+end
 end
 
 function staple2DChange(src,evn,plotH,pStapleH)
@@ -870,48 +1226,133 @@ end
 function JsonTxt_scafButtonDown(src,~,surfH3D,sH3D)
 % evn
 % src
+XYZAll = [];
 if src.UserData.Mode == 1   % cyliner rep to helical
-    XYZ= surfH3D.UserData.CylRep +  0.8*surfH3D.UserData.BVec ;
-    surfH3D.XData=[XYZ(:,1)' ;XYZ(:,1)' ];
-    surfH3D.YData=[XYZ(:,2)' ;XYZ(:,2)' ];
-    surfH3D.ZData=[XYZ(:,3)' ;XYZ(:,3)' ];    
-    src.UserData.Mode=2 ;
+    for k=1: length(surfH3D)
+        XYZ= surfH3D{k}.UserData.CylRep +  0.8*surfH3D{k}.UserData.BVec ;
+        surfH3D{k}.XData=[XYZ(:,1)' ;XYZ(:,1)' ];
+        surfH3D{k}.YData=[XYZ(:,2)' ;XYZ(:,2)' ];
+        surfH3D{k}.ZData=[XYZ(:,3)' ;XYZ(:,3)' ];
+        src.UserData.Mode=2 ;
+        XYZAll=[XYZAll;XYZ];
+    end
 else                            % helical rep to cylinder
-    XYZ= surfH3D.UserData.CylRep  ;
-    surfH3D.XData=[XYZ(:,1)' ;XYZ(:,1)' ];
-    surfH3D.YData=[XYZ(:,2)' ;XYZ(:,2)' ];
-    surfH3D.ZData=[XYZ(:,3)' ;XYZ(:,3)' ];    
-    src.UserData.Mode=1 ;
+    for k=1: length(surfH3D)
+        XYZ= surfH3D{k}.UserData.CylRep  ;
+        surfH3D{k}.XData=[XYZ(:,1)' ;XYZ(:,1)' ];
+        surfH3D{k}.YData=[XYZ(:,2)' ;XYZ(:,2)' ];
+        surfH3D{k}.ZData=[XYZ(:,3)' ;XYZ(:,3)' ];
+        src.UserData.Mode=1 ;
+        XYZAll=[XYZAll;XYZ];
+    end
 end
-sH3D.XData= XYZ(:,1)'  ;
-sH3D.YData= XYZ(:,2)'  ;
-sH3D.ZData= XYZ(:,3)'  ;
+sH3D.XData= XYZAll(:,1)'  ;
+sH3D.YData= XYZAll(:,2)'  ;
+sH3D.ZData= XYZAll(:,3)'  ;
 
 
-% sdfsf=3
 end
 
 function JsonTxt_stapButtonDown(src,evn,pStapleH)
 if src.UserData.Mode == 1   % helical rep to cylinder
-   for k=1: length(pStapleH)
-       XYZ = pStapleH{k}.UserData.HelicalRep_XYZ -  pStapleH{k}.UserData.BVec ;
-       pStapleH{k}.XData= XYZ(:,1)' ; 
-       pStapleH{k}.YData= XYZ(:,2)' ; 
-       pStapleH{k}.ZData= XYZ(:,3)' ;        
-   end    
-     src.UserData.Mode=2 ;
-  
+    for k=1: length(pStapleH)
+        XYZ = pStapleH{k}.UserData.HelicalRep_XYZ -  pStapleH{k}.UserData.BVec ;
+        pStapleH{k}.XData= XYZ(:,1)' ;
+        pStapleH{k}.YData= XYZ(:,2)' ;
+        pStapleH{k}.ZData= XYZ(:,3)' ;
+    end
+    src.UserData.Mode=2 ;
+    
 else   % cyliner rep to helical
     for k=1: length(pStapleH)
-       XYZ = pStapleH{k}.UserData.HelicalRep_XYZ -  0.2*pStapleH{k}.UserData.BVec  ;
-       pStapleH{k}.XData= XYZ(:,1)' ; 
-       pStapleH{k}.YData= XYZ(:,2)' ; 
-       pStapleH{k}.ZData= XYZ(:,3)' ;        
-   end     
+        XYZ = pStapleH{k}.UserData.HelicalRep_XYZ -  0.2*pStapleH{k}.UserData.BVec  ;
+        pStapleH{k}.XData= XYZ(:,1)' ;
+        pStapleH{k}.YData= XYZ(:,2)' ;
+        pStapleH{k}.ZData= XYZ(:,3)' ;
+    end
     
-      src.UserData.Mode=1 ; 
+    src.UserData.Mode=1 ;
 end
 end
+
+function StapGraphButtonDown(src,evn,table,  pStapleH,  plotH ,jsonSlider2)
+
+d= [src.XData' ,src.YData' ] -  ones(length(src.YData),1)*evn.IntersectionPoint(1:2) ;
+d= d(:,1).^2+d(:,2).^2 ;
+Ind= find(d==min(d));
+
+edgebinsWeak = conncomp(src.UserData.Graph,'OutputForm','cell','Type','weak') ;
+edgesWeak = conncomp(src.UserData.Graph,'OutputForm','vector','Type','weak') ;
+
+Neighbors =  edgebinsWeak{edgesWeak(Ind)}  ;
+
+EdgeList = table2array(src.UserData.Graph.Edges) ;
+
+IndEdge1 = ismember( EdgeList(:,1),Neighbors) ; %find(IndEdge1)
+% IndEdge2 = ismember( EdgeList(:,2),Neighbors)
+% evn
+if evn.Button==1
+    highlight(src,EdgeList((IndEdge1),1),EdgeList((IndEdge1),2) ,'LineWidth',5  )  ;
+elseif evn.Button==3
+    highlight(src,EdgeList((IndEdge1),1),EdgeList((IndEdge1),2) ,'LineWidth',2  )  ;
+    
+    return
+end
+
+
+    
+Neighbors =  edgebinsWeak{edgesWeak(Ind)}  ;
+
+for k=1:length(pStapleH)
+        if ismember(k,Neighbors )
+            pStapleH{k}.LineWidth =5;        plotH{k}.LineWidth =5 ;
+            pStapleH{k}.Color(4) = 1 ;      plotH{k}.Color(4) = 1 ;
+        else
+            pStapleH{k}.LineWidth =2 ;       plotH{k}.LineWidth =2 ;
+            pStapleH{k}.Color(4) =jsonSlider2.Value ;  plotH{k}.Color(4)=jsonSlider2.Value ;
+        end
+end
+QQ = distances(src.UserData.Graph,Neighbors',Neighbors') ;
+QQ(QQ==Inf)=0 ;
+max(max(QQ)) ;
+[Start,End]=find(QQ==max(max(QQ))) ;
+if length(Start)>1
+    Start=Start(1) ;    End=End(1) ;
+end
+
+P = shortestpath(src.UserData.Graph,Neighbors(Start),Neighbors(End)) ;
+global stapleLength
+Neighbors =P ;
+strs = table.Data(Neighbors,1) ;
+LL = table.Data(Neighbors,4) ;
+for k =1:length(strs)
+    strs{k} =strcat( strs{k}, ' L=',  LL{k}) ;
+end
+fprintf('\n');  sum( cellfun(@str2num ,LL)) ;
+% fprintf('\n'); sum(cell2mat(LL));
+fprintf('Total length =%i in %i staples\n',sum(cellfun(@str2num,LL)), length(LL) ) ;
+stapleLength =cellfun(@str2num ,LL) ;
+
+for k=1:length(LL)-1
+    fprintf('%s -',LL{k}) ;
+end
+fprintf('%s',LL{length(LL)}) ;
+fprintf('\n')
+
+% for k=1:length(LL)-1
+% fprintf('(%s)%s -',num2str(k),LL{k}) ;
+% end
+% fprintf('(%s)%s',num2str(length(LL)),LL{length(LL)}) ;
+% fprintf('\n')
+
+for k=1:length(strs)
+    fprintf('|%s |',strs{k}) ;
+end
+fprintf('\n')
+
+getGlobalstapleLength;
+end
+
 
 
 

@@ -132,7 +132,7 @@ elseif isfield(SSS,'S') % user select a  mechanism(one of multiple parts)
         fH2.UserData.AddAdjL =List    ;
     end
     
-    %         dsdf=3
+            dsdf=3
 end
 
 
@@ -187,6 +187,8 @@ if isfield(fH2.UserData,'AddAdjL')
             NewInd1 = fH2.UserData.AddAdjL(k,1)==RemainBundel2  ;
             NewInd2 = fH2.UserData.AddAdjL(k,2)==RemainBundel2  ;
             NewAdjM(  NewInd1,NewInd2)=fH2.UserData.AddAdjL(k,3) ;
+            NewAdjM(  NewInd2,NewInd1)=fH2.UserData.AddAdjL(k,3) ;   %-----
+            
         end
     end
 end

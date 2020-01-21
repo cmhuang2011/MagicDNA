@@ -29,7 +29,12 @@ if isempty(varargin)
     
     fprintf('ExportLineToChimera(h) \n' )
     
+%     substitute_stap( GetHyperB_S, GetHyperB_T, [16:18], [9:11] )
+    fprintf('substitute_stap( GetHyperB_S, GetHyperB_T, [16:18], [9:11] : Bundle indexes ) \n' )
     
+    fprintf('   getGlobalstapleLength ;  : use when inspecting the staple graph for staple lengths in a group.  \n' )
+    
+ 
 end
 
 if length(varargin) >= 1
@@ -84,6 +89,9 @@ if length(varargin) >= 1
                 if  sum(h_text(k).Color==[0,0,1])==3  && ~strcmp(h_text(k).String, '0')
                     h_text(k).FontSize = 18 ;
                     uistack(   h_text(k),'top');
+                elseif ~strcmp(h_text(k).String, '0')
+                    h_text(k).FontSize = 18 ;
+                    uistack(   h_text(k),'top');                    
                 elseif   sum(h_text(k).Color==[0,0,1])==3
                     
                     h_text(k).Visible = 'off';

@@ -14,7 +14,7 @@ The script loadjson.m was built upon previous works by
 
 - Nedialko Krouchev: http://www.mathworks.com/matlabcentral/fileexchange/25713
        date: 2009/11/02
-- François Glineur: http://www.mathworks.com/matlabcentral/fileexchange/23393
+- FranÃ§ois Glineur: http://www.mathworks.com/matlabcentral/fileexchange/23393
        date: 2009/03/22
 - Joel Feenstra: http://www.mathworks.com/matlabcentral/fileexchange/20565
        date: 2008/07/03

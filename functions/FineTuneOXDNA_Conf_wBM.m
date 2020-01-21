@@ -36,19 +36,19 @@ pB=T(:,1:3);
 Bvec=T(:,4:6);
 Axvec=T(:,7:9);
 
-colorArr=zeros(size(pB,1),3);
-for i=1:size(colorArr,1)
-    if strcmp( TSeq{i},'A')
-        colorArr(i,:)=[1,0,0];
-    elseif strcmp( TSeq{i},'T')
-        colorArr(i,:)=[0,1,0];
-    elseif strcmp( TSeq{i},'C')
-        colorArr(i,:)=[0,0,1];
-    elseif strcmp( TSeq{i},'G')
-        colorArr(i,:)=[0.6,0.6,0];
-    end
-end
-ind=1:size(pB,1);
+% colorArr=zeros(size(pB,1),3);
+% for i=1:size(colorArr,1)
+%     if strcmp( TSeq{i},'A')
+%         colorArr(i,:)=[1,0,0];
+%     elseif strcmp( TSeq{i},'T')
+%         colorArr(i,:)=[0,1,0];
+%     elseif strcmp( TSeq{i},'C')
+%         colorArr(i,:)=[0,0,1];
+%     elseif strcmp( TSeq{i},'G')
+%         colorArr(i,:)=[0.6,0.6,0];
+%     end
+% end
+% ind=1:size(pB,1);
 
 fH=figure;
 clf;
@@ -71,25 +71,25 @@ pHss=cell(1, length(Ts)) ;
 scafInitNotFirst=0;
 
 
-if 1~= find(a==max(a))
-    sacfInd=find(a==max(a));
-    QQT=T;
-    QQTStrand=TStrand;
-    PrevStappleInd = sum(a(1:sacfInd-1))  ;
-    ScafIndAll=PrevStappleInd+1:a(sacfInd)+PrevStappleInd  ;
-    T(ScafIndAll,:)=[];
-    TStrand(ScafIndAll,:)=[];
-    T=[QQT(ScafIndAll,:) ;T];
-    TStrand=[QQTStrand(ScafIndAll,:) ;TStrand];
-    QQQ=TStrand;
-    [a1,~,~]=unique(TStrand,'stable') ;
-    %     IndOrder= unique(TStrand,'stable') ;
-    for subs=1:length(a1)
-        TStrand(QQQ==a1(subs))=subs;
-    end
-    scafInitNotFirst=1;
-    
-end
+% if 1~= find(a==max(a))
+%     sacfInd=find(a==max(a));
+%     QQT=T;
+%     QQTStrand=TStrand;
+%     PrevStappleInd = sum(a(1:sacfInd-1))  ;
+%     ScafIndAll=PrevStappleInd+1:a(sacfInd)+PrevStappleInd  ;
+%     T(ScafIndAll,:)=[];
+%     TStrand(ScafIndAll,:)=[];
+%     T=[QQT(ScafIndAll,:) ;T];
+%     TStrand=[QQTStrand(ScafIndAll,:) ;TStrand];
+%     QQQ=TStrand;
+%     [a1,~,~]=unique(TStrand,'stable') ;
+%     %     IndOrder= unique(TStrand,'stable') ;
+%     for subs=1:length(a1)
+%         TStrand(QQQ==a1(subs))=subs;
+%     end
+%     scafInitNotFirst=1;
+%     
+% end
 [a,b]=hist(TStrand,unique(TStrand)) ;
 a0;
 StramdIndTable=[a;a0];
@@ -108,17 +108,19 @@ for strandi=1: length(Ts)
     zpp=T(included,3) +Coeff*BVechere(:,3) ;
     
     PartXYZ=[xpp,ypp,zpp];
-    
-    if strandi== find(a==max(a))
-        xc = xpp';
-        yc = ypp';
-        zc = zpp';
-        col = (1:length(ypp))*1000;  % This is the color
-        pHss{strandi}=surface([xc;xc],[yc;yc],[zc;zc],[col;col],...
-            'facecol','no', 'edgecol','interp', 'linew',2);
-        %         pHss{strandi}.Color=[0,0,1];
-        pHss{strandi}.UserData=GloIndex:length(xpp)  ;
-    else
+%     
+%     if strandi== find(a==max(a))
+% %         xc = xpp';
+% %         yc = ypp';
+% %         zc = zpp';
+% %         col = (1:length(ypp))*1000;  % This is the color
+% %         pHss{strandi}=surface([xc;xc],[yc;yc],[zc;zc],[col;col],...
+% %             'facecol','no', 'edgecol','interp', 'linew',2);
+%         %         pHss{strandi}.Color=[0,0,1];
+%         pHss{strandi} =plot3(xpp,ypp,zpp,'.-');     %backbone
+%         pHss{strandi}.UserData=GloIndex:length(xpp)  ;
+%         pHss{strandi}.LineWidth=0.1;
+%     else
         pHss{strandi} =plot3(xpp,ypp,zpp,'.-');     %backbone
         pHss{strandi}.LineWidth=0.1;
         
@@ -127,7 +129,7 @@ for strandi=1: length(Ts)
         pHss{strandi}.UserData=GloIndex:GloIndex+length(xpp)-1  ;
         %            pHss{strandi}.HitTest='off'  ;
         pHss{strandi}.MarkerFaceColor=pHss{strandi}.Color;
-    end
+%     end
     
     GloIndex=GloIndex+length(xpp);
     
@@ -321,11 +323,11 @@ for iTransf= 1:max(BelongTransM)
     NewT( IndexAll,1:9)=   [PosV'-Coeff2* BVecNew',   BVecNew',   NVecNew'];
 end
 
-if ScafInd~=1  %scaf strand is not the first in topology file------found bug in V3
-    MoveAheadind= sum(StramdIndTable(2,1:ScafInd-1));
-    
-    NewT=[ NewT(ScafL+1:ScafL+MoveAheadind ,: ) ; NewT(1:ScafL,:); NewT(ScafL+MoveAheadind+1:end,:)];
-end
+% if ScafInd~=1  %scaf strand is not the first in topology file------found bug in V3
+%     MoveAheadind= sum(StramdIndTable(2,1:ScafInd-1));
+%     
+%     NewT=[ NewT(ScafL+1:ScafL+MoveAheadind ,: ) ; NewT(1:ScafL,:); NewT(ScafL+MoveAheadind+1:end,:)];
+% end
 
 
 mmNewT=min(NewT(:,1:3)) ;
@@ -475,9 +477,9 @@ else   %rotation
         
         SacfXYZ=[pHss{1}.XData(1,Inscaf);pHss{1}.YData(1,Inscaf);pHss{1}.ZData(1,Inscaf)] ;
         NewScaf=RMat*(SacfXYZ-Gcenter*ones(1,size(SacfXYZ,2)))+ Gcenter*ones(1,size(SacfXYZ,2));
-        pHss{1}.XData(:,Inscaf)=[NewScaf(1,:);NewScaf(1,:)] ;
-        pHss{1}.YData(:,Inscaf)=[NewScaf(2,:);NewScaf(2,:)] ;
-        pHss{1}.ZData(:,Inscaf)=[NewScaf(3,:);NewScaf(3,:)] ;
+        pHss{1}.XData(:,Inscaf)=[NewScaf(1,:)] ;
+        pHss{1}.YData(:,Inscaf)=[NewScaf(2,:)] ;
+        pHss{1}.ZData(:,Inscaf)=[NewScaf(3,:)] ;
         
     end
 end

@@ -247,10 +247,10 @@ if isequal(allbtn.StartSTEP ,src)
     
     %-------------------------------
     [C,~,IC]=uniquetol(coordinates,'ByRows',true);
-    shp_test = alphaShape(C(:,1),C(:,2),C(:,3))  ;   [tri_test,P_test] =  boundaryFacets(shp_test)
+    shp_test = alphaShape(C(:,1),C(:,2),C(:,3))  ;   [tri_test,P_test] =  boundaryFacets(shp_test);
     if isempty(P_test) % planar points
         %          extraP=10*rand(1,3) ;  % don't use stochastic for consistence
-        [coeff,score,latent] = pca(coordinates) ;
+        [coeff,score,~] = pca(coordinates) ;
         extraP=mean(score) + std(std(score))*coeff(:,3)';
         C=[C;extraP];
     end
@@ -483,8 +483,9 @@ for edgej=1:size(edges,1)
         S=setdiff(edges , thisedge,'rows') ;
                    nw=1 ;
         while 1   % incase select wrong reference point,   09142018
-            if  ismember(thisedge(1),S) && rand<0.1
+            if  ismember(thisedge(1),S) && rand<0.01
                 EEE=thisedge;
+%                 rareHappen =1
             else
                 EEE=flip(thisedge);
             end
@@ -516,7 +517,7 @@ for edgej=1:size(edges,1)
             if  nw==200
                 RandV = rand(1,3) ;
                 YVec=cross(ZVec,RandV)  ;YVec =YVec/norm(YVec) ;
-                XVec=cross(YVec,ZVec)  ;             
+                XVec=cross(YVec,ZVec)  ;    
                 break;
             end
             
@@ -556,7 +557,7 @@ end
 %     LocalXYZ_h{ke,2}.ButtonDownFcn =@(src,evn)ChangeLocalOrientation(src,evn,LocalXYZ_h) ;
 %     LocalXYZ_h{ke,3}.ButtonDownFcn =@(src,evn)ChangeLocalOrientation(src,evn,LocalXYZ_h) ;
 % end
-
+% edge_ZYX_Vec(10:13,:)
 
 
 hp1 = uipanel('Parent',ss_STEP,'Title','Insert Truss','FontSize',12,...
@@ -621,9 +622,17 @@ checkH.Callback=@(src,evn)checkFcn(src,evn)  ;
             hLg.Position=[0.0063 0.9728 0.1569 0.025];
 %------------------
 
-
+fH=gcf ; fH.UserData.MovieStep =2 ;
+% fH.KeyPressFcn = @(src,evn)KeyPressEditSketch(src,evn) ;
 axis equal;
 end
+
+% function KeyPressEditSketch(src,evn)
+% switch evn.Key
+%     case 'h'
+%         implay('EditSketchSTEP.mp4');
+% end
+% end
 
 function  ChangeLocalOrientation(src,evn,LocalXYZ_h)
 Edgei_XYZ= src.UserData.Edgei_XYZ ;
@@ -960,7 +969,7 @@ btnSaveTable.Callback=@(src,evn)saveTable(src,evn) ;
 
 AssignIcon( btnAssignCustomHC,'CustomHC.jpg' ) ;  btnAssignCustomHC.TooltipString='Create customized crosssection for honeycomb lattice' ;
 AssignIcon( btnAssignCustomSQ,'CustomSQ.jpg' ) ;  btnAssignCustomSQ.TooltipString='Create customized crosssection for square lattice' ;
-AssignIcon( btnRoundL,'ROund10p5.jpg' );  btnRoundL.TooltipString='Round to 10.5 bp' ;
+AssignIcon( btnRoundL,'Round10p5.jpg' );  btnRoundL.TooltipString='Round to 10.5 bp' ;
 AssignIcon( btnLoadTable,'LoadTable.jpg' ); btnLoadTable.TooltipString='Load the pre-saved table to recreate the same cylinder model. ' ;
 AssignIcon( btnExport2,'ExportToAssembly.jpg' );  btnExport2.TooltipString='Convert the line model into the cylinder model, according to the table. ' ;
 AssignIcon( btnSaveTable,'SaveTable.jpg' ); btnSaveTable.TooltipString='Save current table. Overwrite the file "STEP_table_Data.mat" under current directory, which can be moved to somethere.' ;
@@ -970,6 +979,7 @@ align([btnAssignCustomSQ btnAssignCustomHC btnRoundL],'distribute','bottom');
 %             hLg= legend(ForLegend,'Click me for instructions','Location','northwest','Tag','SketchLG' ) ;
 hLg= findobj(gctab,'Type','legend' )  ;
 hLg.ButtonDownFcn=@(src,evn)LegendBoxing_SketchStep2( src,evn,ax ) ;
+fH=gcf ; fH.UserData.MovieStep =3 ;
 end % end of export bundle
 
 function saveTable(~,~)
@@ -1113,11 +1123,12 @@ for k=1:size(src.Data,1)-1
         load('CustumSQLattice.mat','CustumSQLattice') ;
         inthisbundle=src.Data{k,2}*length(CustumSQLattice);
     else
-        STR=src.Data{k,3} ;   STR=STR(1:end-2);
+        STR=src.Data{k,3} ;   STR=STR(1:end-2); Ind = str2num(src.Data{k,3}(end) ) ;
+
         inthisbundle=src.Data{k,2}*str2num_CM(STR) ;
         if isempty(str2num_CM(STR))
             load('CustumHCLattice.mat','CustumHCLattice') ;
-            inthisbundle=src.Data{k,2}*length(CustumHCLattice);          % nCyl as in custom crosssection.  Case to case.
+            inthisbundle=src.Data{k,2}*length(CustumHCLattice{Ind});          % nCyl as in custom crosssection.  Case to case.
         end
     end
     cc=cc+inthisbundle;

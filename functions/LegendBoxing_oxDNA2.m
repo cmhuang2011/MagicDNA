@@ -13,6 +13,8 @@ function  LegendBoxing_oxDNA2( src,evn,axMain )
                '3. Individual configuration in the trajectory can be visualized by selecting the popup menu, multiple selection by the listbox. User can export one configuration(assigned by the popup) to a .bild file for Chimera for better quality.';
                '4. Root-mean-square deviation(RMSD) and root-mean-square fluctuation(RMSF) analyses are included. The average configuration is computed by principle component analysis(PCA, required Statistics and Machine Learning Toolbox) and color-coded with RMSF level shown in the right. Similar to individual frame, this representation can be exported to a .bild file for Chimera as well. ';
                '';
+               '[h]: watch tutorial movie.';
+               '[g]: Call angle calculation GUI.'
                } ;
                                  
                       f = msgbox(STR ,'Instructions', 'help' ,CreateStruct);    

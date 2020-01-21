@@ -15,7 +15,7 @@ function  LegendBoxing_ssScaf( src,evn,axMain )
        if evn.IntersectionPoint(2)>0.5
            CreateStruct.Interpreter = 'tex';
            CreateStruct.WindowStyle = 'modal';
-           STR={'\fontsize{11}(1) For cylinder ends without connections, assign the extended ssDNA lengths from both ends to form scaffold loops in to the top-right popup menu. The total lengths of scaffold loops will be two times of the number of bases at the end of each bundle.';
+           STR={'\fontsize{11}(1) For cylinder ends without connections, assign the extended ssDNA lengths from both ends to form scaffold loops in the top-right popup menu. The total lengths of scaffold loops will be two times of the number of bases at the end of each bundle.';
                'Recommended this value as least 4 nts.';
                '(2) Use the keyboard to zoom in/out and the mouse to select connections to specify lengths of scaffold ssDNA.';
              
@@ -36,7 +36,7 @@ function  LegendBoxing_ssScaf( src,evn,axMain )
                '[x]: axis equal ';
                '[X]: axis auto ';
                '[p]: print current view under directory. ';
-               
+               '[h]: watch tutorial movie.'
                } ;
                                  
 %            f = msgbox(STR ,'Instructions', 'custom',icondata,iconcmap ,CreateStruct);    

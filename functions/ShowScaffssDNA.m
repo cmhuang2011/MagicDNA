@@ -12,7 +12,7 @@ if ~isempty(QQ) % if have saved overhangs sequences , July 3 2019
     HeadTail=[Head;Tails] ;
     UnUsedSeq= cell(size(HeadTail,2) ,1) ;
     for k=1: length(UnUsedSeq)
-        UnUsedSeq{k}=GetHyperB.pSeq(HeadTail(1,k):HeadTail(2,k)) ;
+        UnUsedSeq{k}=GetHyperB.pSeqAll(HeadTail(1,k):HeadTail(2,k)) ;
     end
     %     GetHyperB.ScafUnUsedSeq = UnUsedSeq ;
 end
@@ -22,26 +22,33 @@ f96 = figure(96); clf ; hold on ;
 axCurr= gca;
 % [ScafHelixXYZ,ScafBasesCenter  ]=plotScaf2_Helix_V2_noGraphics( GetHyperB,{GetHyperB.scafC5},Isstap ,[0,0,1] ,TM ) ;     % get scaf strands coordinate
 
-ScafssStrands = cell(1, size(HeadTail,2)) ;  % C5
-for k = 1:length(ScafssStrands)
-    %    if HeadTail(1,k)~= HeadTail(2,k)
-    ScafssStrands{k} = GetHyperB.ScafAllBase(HeadTail(1,k):HeadTail(2,k),: ) ;
-    %    end
-    
-end
-
+% ScafssStrands = cell(1, size(HeadTail,2)) ;  % C5
+% cc=1;
+% for scafi = 1: length(GetHyperB.ScafAllBase)
+% for k = 1:length(ScafssStrands)
+%     %    if HeadTail(1,k)~= HeadTail(2,k)
+%     ScafssStrands{cc} = GetHyperB.ScafAllBase{scafi}(HeadTail(1,k):HeadTail(2,k),: ) ;
+%     %    end
+%     cc=cc+1 ;
+% end
+% end
 Isstap= 0 ;  TM=1 ;
 
-[ScafHelixXYZ,ScafBasesCenter  ]=plotScaf2_Helix_V2_noGraphics( GetHyperB,{GetHyperB.scafC5},Isstap ,[0,0,1] ,TM ) ;     % get scaf strands coordinate
+[ScafHelixXYZ,ScafBasesCenter  ]=plotScaf2_Helix_V2_noGraphics( GetHyperB,GetHyperB.scafC5,Isstap ,[0,0,1] ,TM ) ;     % get scaf strands coordinate
+
+GatherAll= [];
+for k=1: length(ScafHelixXYZ)
+    GatherAll=[GatherAll; ScafHelixXYZ{k}];
+end
 
 pH=cell(size(HeadTail,2),1) ; tH= cell(size(HeadTail,2),1) ;
 for k = 1: size(HeadTail,2)
-    IndStartEnd =  HeadTail(:,k)+[-1;1] ;
-    XYZ= ScafHelixXYZ{1}(IndStartEnd(1):IndStartEnd(2) , :) ;
+    IndStartEnd =  HeadTail(:,k);
+    XYZ= GatherAll(IndStartEnd(1):IndStartEnd(2) , :) ;
     
     pH{k} = plot3(XYZ(:,1),XYZ(:,2),XYZ(:,3) ,'-ok','MarkerFaceColor','k' ,'MarkerSize',3) ;
     mXYZ= mean(XYZ ,1) ;
-    tH{k} = text(mXYZ(1), mXYZ(2), mXYZ(3)  ,  strcat('\leftarrow', num2str(abs(diff(IndStartEnd) )+1-2  )),'Fontsize',12  ,'HitTest', 'off', 'clipping', 'on') ;
+    tH{k} = text(mXYZ(1), mXYZ(2), mXYZ(3)  ,  strcat('\leftarrow', num2str(abs(diff(IndStartEnd) )+1  )),'Fontsize',12  ,'HitTest', 'off', 'clipping', 'on') ;
 end
 
 for k = 1: size(HeadTail,2)

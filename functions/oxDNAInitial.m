@@ -30,7 +30,7 @@ axes(ax);cltab; hold on ;axis equal;
 
 % pScaf2=plotScaf2_Helix_V2( GetHyperB,{GetHyperB.scafC5}  ) ;     % plot scaf strand 
 Isstap = 0; TM=2 ;
-[pScaf2,ScafHelix,pScaf_center,ScafBaseCenterHelix ,NVecscaf,scafBundleRout ]=plotScaf2_Helix_V2( GetHyperB,{GetHyperB.scafC5},Isstap ,[0,0,1] ,TM ) ;     % plot scaf strands 
+[pScaf2,ScafHelix,pScaf_center,ScafBaseCenterHelix ,NVecscaf,scafBundleRout ]=plotScaf2_Helix_V2( GetHyperB,GetHyperB.scafC5,Isstap ,[0,0,1] ,TM ) ;     % plot scaf strands 
 
 
 % return
@@ -56,7 +56,7 @@ CS.CSLengths=CSLengths ;
 sdfsf=3 ;
 
 
-oxDNASlider.Callback=@(src,evn)silderexplode(src,evn, GetHyperB ,scaf, stap ,{GetHyperB.scafC5},GetHyperB.StapList3,CS,GetHyperB.ClosingCornerNotation ) ;
+oxDNASlider.Callback=@(src,evn)silderexplode(src,evn, GetHyperB ,scaf, stap ,GetHyperB.scafC5,GetHyperB.StapList3,CS,GetHyperB.ClosingCornerNotation ) ;
 
 btn2.Callback= @(src,evn)ExportOxDNA(src,evn,scaf ,stap ,GetHyperB,CS, oxDNACheck,scafBundleRout,stapBundleRout,CSBundleRout) ;
 btn3.Callback= @(src,evn)ExportBUILD(src,evn,scaf ,stap ,GetHyperB,CS, oxDNACheck) ;
@@ -206,69 +206,70 @@ StpL = cellfun('length',t_json.Data(1:length(GetHyperB.StapList3),3))  ;
 
 
 % cellfun('length',stap.StapHelix) 
-scafL = size(scaf.ScafHelix{1} ,1)  ;
-scafSeq =GetHyperB.pSeq(1:size(scaf.ScafHelix{1} ,1)) ;
-ClosingStrandL = cellfun('length',t_json.Data(length(GetHyperB.StapList3)+2:end ,3))  ;
+% scafL = size(scaf.ScafHelix{1} ,1)  ;
+% scafSeq =GetHyperB.pSeq(1:size(scaf.ScafHelix{1} ,1)) ;
+% ClosingStrandL = cellfun('length',t_json.Data(length(GetHyperB.StapList3)+2:end ,3))  ;
 
-    if ~isempty(findstr(scafSeq,'?'))
-    showerroe=1 
-    end
+%     if ~isempty(findstr(scafSeq,'?'))
+%     showerroe=1 
+%     end
 %-------------------
     if oxDNACheck.Value==1
-    BM2=[ cell2mat(scafBundleRout); cell2mat(stapBundleRout); cell2mat(CSBundleRout)] ;
+    BM2=[ cell2mat(scafBundleRout); cell2mat(stapBundleRout); cell2mat(CSBundleRout )] ; 
+%      BM2=[ cell2mat(scafBundleRout); cell2mat(stapBundleRout);cell2mat(CSBundleRout(1:12) )] ;
     else
     BM2=[ cell2mat(scafBundleRout); cell2mat(stapBundleRout)] ;      
     end
     
 %     GetHyperB.ScafAllBase
 %     GetHyperB.StapAllBase
-    
-    mrDNA_stack=[ cell2mat( {GetHyperB.ScafAllBase}); cell2mat( GetHyperB.StapAllBase)] ; 
-    scafL =size(cell2mat( {GetHyperB.ScafAllBase}),1 ) 
-    mrDNA_stack(:,end+1)=-1 ;
-    
-    for k=1:size(mrDNA_stack,1)-1
-        if mrDNA_stack(k,1)==mrDNA_stack(k+1,1) && abs(diff(mrDNA_stack(k:k+1,2) ))<=2
-         mrDNA_stack(k,3) =k;
-        end
-        
-    end
-    Inds=find(mrDNA_stack(:,3) ==-1) ; % check crossover
-    for k=1:length(Inds)
-    C5_Base_Stack = mrDNA_stack(Inds(k),:)      ;
-        if mod(GetHyperB.RelateVec(C5_Base_Stack(1)),2) ==0  && Inds(k)<=scafL
-             TargetStack = C5_Base_Stack(1:2) + [0 ,1] ;
-        elseif mod(GetHyperB.RelateVec(C5_Base_Stack(1)),2) ==1  && Inds(k)<=scafL
-              TargetStack = C5_Base_Stack(1:2) + [0 ,-1] ;
-        elseif mod(GetHyperB.RelateVec(C5_Base_Stack(1)),2) ==0  && Inds(k)>scafL
-              TargetStack = C5_Base_Stack(1:2) + [0 ,-1] ;
-        elseif mod(GetHyperB.RelateVec(C5_Base_Stack(1)),2) ==1  && Inds(k)>scafL
-              TargetStack = C5_Base_Stack(1:2) + [0 ,1] ;
-        end
-        
-       [Lia,Locb] = ismember(TargetStack, mrDNA_stack(:,1:2),'rows' ) ;
-        
-        
-       if  Lia==1
-%            if  mrDNA_stack(Inds(k) ,3 )~=-1
-%                sdfsf=3
+%     
+%     mrDNA_stack=[ cell2mat( {GetHyperB.ScafAllBase}); cell2mat( GetHyperB.StapAllBase)] ; 
+%     scafL =size(cell2mat( {GetHyperB.ScafAllBase}),1 ) 
+%     mrDNA_stack(:,end+1)=-1 ;
+%     
+%     for k=1:size(mrDNA_stack,1)-1
+%         if mrDNA_stack(k,1)==mrDNA_stack(k+1,1) && abs(diff(mrDNA_stack(k:k+1,2) ))<=2
+%          mrDNA_stack(k,3) =k;
+%         end
+%         
+%     end
+%     Inds=find(mrDNA_stack(:,3) ==-1) ; % check crossover
+%     for k=1:length(Inds)
+%     C5_Base_Stack = mrDNA_stack(Inds(k),:)      ;
+%         if mod(GetHyperB.RelateVec(C5_Base_Stack(1)),2) ==0  && Inds(k)<=scafL
+%              TargetStack = C5_Base_Stack(1:2) + [0 ,1] ;
+%         elseif mod(GetHyperB.RelateVec(C5_Base_Stack(1)),2) ==1  && Inds(k)<=scafL
+%               TargetStack = C5_Base_Stack(1:2) + [0 ,-1] ;
+%         elseif mod(GetHyperB.RelateVec(C5_Base_Stack(1)),2) ==0  && Inds(k)>scafL
+%               TargetStack = C5_Base_Stack(1:2) + [0 ,-1] ;
+%         elseif mod(GetHyperB.RelateVec(C5_Base_Stack(1)),2) ==1  && Inds(k)>scafL
+%               TargetStack = C5_Base_Stack(1:2) + [0 ,1] ;
+%         end
+%         
+%        [Lia,Locb] = ismember(TargetStack, mrDNA_stack(:,1:2),'rows' ) ;
+%         
+%         
+%        if  Lia==1
+% %            if  mrDNA_stack(Inds(k) ,3 )~=-1
+% %                sdfsf=3
+% %            end
+%           QQ=find(and(mrDNA_stack(:,1)==TargetStack(1),mrDNA_stack(:,2)==TargetStack(2))) ;
+%           for cc=1:length(QQ)
+%            if ~xor(Inds(k)>scafL ,QQ(cc)-1>scafL)
+%                [Inds(k) ,  QQ(cc)];
+%            mrDNA_stack(Inds(k) ,3 ) = QQ(cc)-1 ;
+%            else
+%                sdsf=2;
+%            
 %            end
-          QQ=find(and(mrDNA_stack(:,1)==TargetStack(1),mrDNA_stack(:,2)==TargetStack(2))) ;
-          for cc=1:length(QQ)
-           if ~xor(Inds(k)>scafL ,QQ(cc)-1>scafL)
-               [Inds(k) ,  QQ(cc)];
-           mrDNA_stack(Inds(k) ,3 ) = QQ(cc)-1 ;
-           else
-               sdsf=2;
-           
-           end
-          end
-%           [Inds(k),  Locb-1]
-       end
-       
-%         sdfsff =3
-    end
-    
+%           end
+% %           [Inds(k),  Locb-1]
+%        end
+%        
+% %         sdfsff =3
+%     end
+%     
     
     
     BM=BM2(:,1) ;
@@ -365,47 +366,61 @@ save(fileTransInd_name, 'BM3') ;
 % return
 
 %% topology
+[scafL,~] = cellfun(@size, scaf.ScafHelix) ;
+scafSeq=GetHyperB.pSeq ;
+% scafL = size(scaf.ScafHelix{1} ,1)  ;
+% scafSeq =GetHyperB.pSeq(1:size(scaf.ScafHelix{1} ,1)) ;
+
+ClosingStrandL = cellfun('length',t_json.Data(length(GetHyperB.StapList3)+2:end ,3))  ;
+
+%      stepAssign=5 ;Ex_DecoratePlatesWithOverhangs ; % selective add closing strands     
+
+
     file3_name='prova.top' ;
     fileID2 = fopen(file3_name,'w');
     
     %-----initial---------
     if oxDNACheck.Value==0
-    fprintf(fileID2,'%u %u\n',scafL+sum(StpL),length(StpL)+1 );  % header
-    saveallseq = char(ones(1,scafL+sum(StpL))) ;
+    fprintf(fileID2,'%u %u\n',sum(scafL)+sum(StpL),length(StpL)+length(scafL) );  % header
+    saveallseq = char(ones(1,sum(scafL)+sum(StpL))) ;
 
     else
-    fprintf(fileID2,'%u %u\n',scafL+sum(StpL)+sum(ClosingStrandL),length(ClosingStrandL)+length(StpL)+1 );  % header     
-    saveallseq = char(ones(1,scafL+sum(StpL)+sum(ClosingStrandL)  )) ;
+    fprintf(fileID2,'%u %u\n',sum(scafL)+sum(StpL)+sum(ClosingStrandL),length(ClosingStrandL)+length(StpL)+length(scafL) );  % header     
+    saveallseq = char(ones(1,sum(scafL)+sum(StpL)+sum(ClosingStrandL)  )) ;
 
     end
 %         fprintf(fileID2,'%u %u\n',scafL,1 );  % header
 
     %----scaf---------
-    fprintf(fileID2,'%u %c %d %i\n', 1, scafSeq(1), 1   , -1)  ; 
+    q=1 ;
+    for scaf_j = 1 : length(scafSeq)
+    saveallseq(q:scafL(scaf_j)-1+q) =scafSeq{scaf_j}  ;
+        
+    fprintf(fileID2,'%u %c %d %i\n', scaf_j, scafSeq{scaf_j}(1), q   , -1)  ;  q=q+1;
 %         fprintf(fileID2,'%u %c %d %u\n', 1, scafSeq(1), -1   , 1)  ; 
 
-    for scafi=2:length(scafSeq)-1   
-        fprintf(fileID2,'%u %c %u %u\n', 1, scafSeq(scafi),scafi,scafi-2 )  ;
+    for scafi=2:length(scafSeq{scaf_j})-1   
+        fprintf(fileID2,'%u %c %u %u\n', scaf_j, scafSeq{scaf_j}(scafi),q,q-2 )  ; q=q+1;
 %                 fprintf(fileID2,'%u %c %u %u\n', 1, scafSeq(scafi),scafi-2,scafi )  ;
     end
-    fprintf(fileID2,'%u %c %i %d\n', 1, scafSeq(scafi+1),-1, scafi-1) ; 
+    fprintf(fileID2,'%u %c %i %d\n', scaf_j, scafSeq{scaf_j}(scafi+1),-1, q-2) ;  q=q+1;
 %        fprintf(fileID2,'%u %c %u %d\n', 1, scafSeq(scafi+1),scafi-1, -1) ; 
    
-    saveallseq(1:scafL) =scafSeq(1:scafi+1)  ;
+    end
     %------staple-----------------
-    ss=scafi-1;
+    ss=q-1-2;
     for stpi2=1:length(GetHyperB.StapList3)
         StapiSeq=tData{stpi2,3};
-       if strcmp(GetHyperB.ScafOption.prevStack ,'polyT')
+%        if strcmp(GetHyperB.ScafOption.prevStack ,'polyT')
         StapiSeq(findstr(StapiSeq,'?') ) ='T' ;   %   poly T design 
-       end
+%        end
         
-            fprintf(fileID2,'%u %c %d %i\n', stpi2+1, StapiSeq(1), ss+3,-1)  ;         %     fprintf(fileID2,'%u %c %d %u\n', stpi2+1, StapiSeq(1),-1, ss+3)  ;
+            fprintf(fileID2,'%u %c %d %i\n', stpi2+length(scafL), StapiSeq(1), ss+3,-1)  ;         %     fprintf(fileID2,'%u %c %d %u\n', stpi2+1, StapiSeq(1),-1, ss+3)  ;
 
             for stapiline=2:length(StapiSeq)-1   
-            fprintf(fileID2,'%u %c %u %u\n', stpi2+1, StapiSeq(stapiline),ss+stapiline+2 ,ss+stapiline )  ; %            fprintf(fileID2,'%u %c %u %u\n', stpi2+1, StapiSeq(stapiline),ss+stapiline ,ss+2+stapiline )  ;
+            fprintf(fileID2,'%u %c %u %u\n', stpi2+length(scafL), StapiSeq(stapiline),ss+stapiline+2 ,ss+stapiline )  ; %            fprintf(fileID2,'%u %c %u %u\n', stpi2+1, StapiSeq(stapiline),ss+stapiline ,ss+2+stapiline )  ;
             end
-            fprintf(fileID2,'%u %c %i %d\n', stpi2+1, StapiSeq(end),-1,ss+stapiline+1) ;    %    fprintf(fileID2,'%u %c %u %d\n', stpi2+1, StapiSeq(end),ss+stapiline+1, -1) ; 
+            fprintf(fileID2,'%u %c %i %d\n', stpi2+length(scafL), StapiSeq(end),-1,ss+stapiline+1) ;    %    fprintf(fileID2,'%u %c %u %d\n', stpi2+1, StapiSeq(end),ss+stapiline+1, -1) ; 
             
         saveallseq(ss+3:ss+3+stapiline) =StapiSeq;
         ss=ss+stapiline+1;
@@ -418,11 +433,11 @@ save(fileTransInd_name, 'BM3') ;
          for csi2=1:length(ClosingStrandL)
               csiSeq=tData{length(GetHyperB.StapList3)+1+csi2,3};
               
-            fprintf(fileID2,'%u %c %d %i\n', csi2+stpi2+1, csiSeq(1), ss+3,-1)  ;  % fprintf(fileID2,'%u %c %d %u\n', csi2+stpi2+1, csiSeq(1),-1, ss+3)  ;
+            fprintf(fileID2,'%u %c %d %i\n', csi2+stpi2+scaf_j, csiSeq(1), ss+3,-1)  ;  % fprintf(fileID2,'%u %c %d %u\n', csi2+stpi2+1, csiSeq(1),-1, ss+3)  ;
             for csiline=2:length(csiSeq)-1   
-            fprintf(fileID2,'%u %c %u %u\n', csi2+stpi2+1, csiSeq(csiline),ss+csiline+2 ,ss+csiline )  ;     %      fprintf(fileID2,'%u %c %u %u\n', csi2+stpi2+1, csiSeq(csiline),ss+csiline ,ss+2+csiline )  ;
+            fprintf(fileID2,'%u %c %u %u\n', csi2+stpi2+scaf_j, csiSeq(csiline),ss+csiline+2 ,ss+csiline )  ;     %      fprintf(fileID2,'%u %c %u %u\n', csi2+stpi2+1, csiSeq(csiline),ss+csiline ,ss+2+csiline )  ;
             end
-            fprintf(fileID2,'%u %c %i %d\n', csi2+stpi2+1, csiSeq(end),-1, ss+csiline+1  ) ;          %   fprintf(fileID2,'%u %c %u %d\n', csi2+stpi2+1, csiSeq(end),ss+csiline+1, -1) ; 
+            fprintf(fileID2,'%u %c %i %d\n', csi2+stpi2+scaf_j, csiSeq(end),-1, ss+csiline+1  ) ;          %   fprintf(fileID2,'%u %c %u %d\n', csi2+stpi2+1, csiSeq(end),ss+csiline+1, -1) ; 
             
          saveallseq(ss+3:ss+3+csiline) =csiSeq;
          ss=ss+csiline+1;     
@@ -438,23 +453,27 @@ fclose(fileID2);
 %----------------
 % findstr(scafSeq,'?')
 if oxDNACheck.Value==0
-    CentersVec = zeros(scafL+sum(StpL) , 3); 
-    BVec = zeros(scafL+sum(StpL) , 3); 
-    NVec = zeros(scafL+sum(StpL) , 3); 
+    CentersVec = zeros(sum(scafL)+sum(StpL) , 3); 
+    BVec = zeros(sum(scafL)+sum(StpL) , 3); 
+    NVec = zeros(sum(scafL)+sum(StpL) , 3); 
 else
-    CentersVec = zeros(scafL+sum(StpL)+sum(ClosingStrandL) , 3); 
-    BVec = zeros(scafL+sum(StpL)+sum(ClosingStrandL) , 3); 
-    NVec = zeros(scafL+sum(StpL)+sum(ClosingStrandL) , 3);     
+    CentersVec = zeros(sum(scafL)+sum(StpL)+sum(ClosingStrandL) , 3); 
+    BVec = zeros(sum(scafL)+sum(StpL)+sum(ClosingStrandL) , 3); 
+    NVec = zeros(sum(scafL)+sum(StpL)+sum(ClosingStrandL) , 3);     
 end
 
-
- 
-CentersVec(1:scafL  ,:) = [scaf.pScaf_center{1}.XData ;  scaf.pScaf_center{1}.YData; scaf.pScaf_center{1}.ZData]'  ;  % slider can change the exported configuration
-BackBone =[scaf.pScaf2{1}.XData ; scaf.pScaf2{1}.YData ;scaf.pScaf2{1}.ZData  ]' ;
-QQ= CentersVec(1:scafL  ,:) - BackBone ;
+% sdsfsf=3
+cc=1; 
+ for scaf_j = 1 :length(scafL)
+CentersVec(cc:cc+scafL(scaf_j)-1  ,:) = [scaf.pScaf_center{scaf_j}.XData ;  scaf.pScaf_center{scaf_j}.YData; scaf.pScaf_center{scaf_j}.ZData]'  ;  % slider can change the exported configuration
+BackBone =[scaf.pScaf2{scaf_j}.XData ; scaf.pScaf2{scaf_j}.YData ;scaf.pScaf2{scaf_j}.ZData  ]' ;
+QQ= CentersVec(cc:cc+scafL(scaf_j)-1   ,:) - BackBone ;
  d=  sqrt(QQ(:,1).^2 +  QQ(:,2).^2 +  QQ(:,3).^2 ) ;
-BVec(1:scafL  ,:) = QQ/mean(d)   ; 
-NVec(1:scafL  ,:) =  scaf.NVecscaf{1}   ; 
+BVec(cc:cc+scafL(scaf_j)-1  ,:) = QQ/mean(d)   ; 
+NVec(cc:cc+scafL(scaf_j)-1   ,:) =  scaf.NVecscaf{scaf_j}   ; 
+
+cc=cc+scafL(scaf_j) ;
+ end
 %----------
 c=0;
 for k = 1:  length(stap.pStap)
@@ -463,30 +482,30 @@ for k = 1:  length(stap.pStap)
 %         sdfsdf=3
 %     end
 %     k
-    CentersVec(scafL+c+1:scafL+c+nB_stap  ,:) =[stap.pStap_center{k}.XData ; stap.pStap_center{k}.YData ; stap.pStap_center{k}.ZData ]' ; 
+    CentersVec(sum(scafL)+c+1:sum(scafL)+c+nB_stap  ,:) =[stap.pStap_center{k}.XData ; stap.pStap_center{k}.YData ; stap.pStap_center{k}.ZData ]' ; 
 
     Centeri_stap =    [stap.pStap_center{k}.XData ; stap.pStap_center{k}.YData ; stap.pStap_center{k}.ZData ]' ; 
     BackBonei_stap =    [stap.pStap{k}.XData ; stap.pStap{k}.YData ; stap.pStap{k}.ZData ]' ; 
     QQ2= Centeri_stap - BackBonei_stap ;
 
-    BVec(scafL+c+1:scafL+c+nB_stap  ,:) = QQ2/mean(d)    ; 
-    NVec(scafL+c+1:scafL+c+nB_stap  ,:) = stap.NVecstap{k}  ; 
+    BVec(sum(scafL)+c+1:sum(scafL)+c+nB_stap  ,:) = QQ2/mean(d)    ; 
+    NVec(sum(scafL)+c+1:sum(scafL)+c+nB_stap  ,:) = stap.NVecstap{k}  ; 
     c=c+nB_stap ;
 end
 
 if oxDNACheck.Value==1
     
     
-    for k = 1:  length(CS.pCS)
+    for k = 1:  length(ClosingStrandL)
     nB_cs =ClosingStrandL(k) ;
-    CentersVec(scafL+c+1:scafL+c+nB_cs  ,:) =[CS.pCS_center{k}.XData ; CS.pCS_center{k}.YData ; CS.pCS_center{k}.ZData ]' ; 
+    CentersVec(sum(scafL)+c+1:sum(scafL)+c+nB_cs  ,:) =[CS.pCS_center{k}.XData ; CS.pCS_center{k}.YData ; CS.pCS_center{k}.ZData ]' ; 
     
     Centeri_cs =  [CS.pCS_center{k}.XData ; CS.pCS_center{k}.YData ; CS.pCS_center{k}.ZData ]' ; 
     BackBonei_stap =   [CS.pCS{k}.XData ; CS.pCS{k}.YData ; CS.pCS{k}.ZData ]'  ; 
     QQ3= Centeri_cs - BackBonei_stap ;
     
-    BVec(scafL+c+1:scafL+c+nB_cs   ,:) = QQ3/mean(d)    ; 
-    NVec(scafL+c+1:scafL+c+nB_cs   ,:) = CS.NVecCS{k}  ; 
+    BVec(sum(scafL)+c+1:sum(scafL)+c+nB_cs   ,:) = QQ3/mean(d)    ; 
+    NVec(sum(scafL)+c+1:sum(scafL)+c+nB_cs   ,:) = CS.NVecCS{k}  ; 
     c=c+nB_cs ;
     
     end
@@ -586,6 +605,8 @@ fprintf(' finished printing oxdna formats \n '  )
 
      fclose(fileID5);
  
+%      sdfsf=3
+     
  FineTuneOXDNA_Conf_wBM     ;
      
 %---------------mrDNAm Chrstopher Muffeo, UIUC
@@ -745,17 +766,18 @@ pStap=stap.pStap ; StapHelix=stap.StapHelix ; pStap_center= stap.pStap_center ; 
 
 
 SacfR=GetHyperB.ScafRouting ;
-MaxBase=max(SacfR(:,3));
+% MaxBase=max(SacfR(:,3));
 % skipPattern1=9:60:MaxBase;   % skip mod2 =0   %test 4/20
 % skipPattern2=39:60:MaxBase;
 skipBase= GetHyperB.skipBase ;
 
 Val =src.Value ;
 
-lineXYZ=ScafHelix{1} ;
-scatterXYZ =  ScafBaseCenterHelix{1} ;
 for stai=1:length(CornerNotation)   %actually mean scaffold, in case multi scaffolds in futures
     StapAll=CornerNotation{stai}    ;
+    lineXYZ=ScafHelix{stai} ;
+    scatterXYZ =  ScafBaseCenterHelix{stai} ;
+
     %      StapAll=GetHyperB.StapList3{stai}    ;
     nn= 1 ;
     for edgeinSCR=1:2:size(StapAll,1)
@@ -779,6 +801,9 @@ for stai=1:length(CornerNotation)   %actually mean scaffold, in case multi scaff
         BasesArr =  setdiff(linspace(BaseStart,BaseEnd , abs(BaseStart-BaseEnd) +1  ) , skipP,'stable') ;   
         nK =  length(BasesArr) ;
 
+%          if nn+nK-1>size(lineXYZ,1)
+%         sdsdf=3
+%          end
         PartHelix2 = lineXYZ(nn:nn+nK-1 ,:  ) ;
         PartScatter2 = scatterXYZ(nn:nn+nK-1 ,:  ) ;
 
@@ -793,10 +818,11 @@ for stai=1:length(CornerNotation)   %actually mean scaffold, in case multi scaff
 
         nn=nn+nK ;
     end  
-end
-pScaf2{1}.XData =  lineXYZ(:,1)' ;pScaf2{1}.YData =  lineXYZ(:,2)' ;pScaf2{1}.ZData =  lineXYZ(:,3)' ;
-pScaf_center{1}.XData =  scatterXYZ(:,1)' ;pScaf_center{1}.YData =  scatterXYZ(:,2)' ;pScaf_center{1}.ZData =  scatterXYZ(:,3)' ;
 
+pScaf2{stai}.XData =  lineXYZ(:,1)' ;pScaf2{stai}.YData =  lineXYZ(:,2)' ;pScaf2{stai}.ZData =  lineXYZ(:,3)' ;
+pScaf_center{stai}.XData =  scatterXYZ(:,1)' ;pScaf_center{stai}.YData =  scatterXYZ(:,2)' ;pScaf_center{stai}.ZData =  scatterXYZ(:,3)' ;
+
+end
 %% stap
 nnK=0;
 for stai=1:  length(StapList3)   % staples

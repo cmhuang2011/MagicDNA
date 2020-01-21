@@ -1,11 +1,11 @@
 function EditBundle(src,evn,GetHyperB,fH,patchH,popupH )
 %UNTITLED Summary of this function goes here
 %   for editting cylinder models of assigned bundle
-clc
+% clc
 
 % decision.pair=2;
 AskWhichBundle(src,evn,GetHyperB,fH,patchH ,popupH.Value(1))  ;
-
+ForSnapshot='on' ;  % 'on' as usual use 
 SelectBundle= src.UserData.SelectBundle ;
 TotalBundle = length(GetHyperB.containBundle ) ;
 
@@ -132,10 +132,10 @@ ylabel('Cylinders in this bundle')
 xlabel('Cylinder length (bp)')
 axis ij ; grid on ;
 
-btn_UpdateBundle = uicontrol(fLocal,'Style', 'pushbutton', 'String', 'Update','Unit','normalized', 'Position', [0.83 0.33 0.08 0.1] );
+btn_UpdateBundle = uicontrol(fLocal,'Style', 'pushbutton', 'String', 'Update','Unit','normalized', 'Position', [0.83 0.33 0.04 0.1] );
 btn_UpdateBundle.Callback=@(src,evn)UpdateBundle(src,evn,GetHyperB,fH,patchH,h_2DNodes,SelectBundle,newLines{SelectBundle} ) ;
 
-btn_SaveBundle = uicontrol(fLocal,'Style', 'pushbutton', 'String', 'Save this bundle','Unit','normalized', 'Position', [0.88 0.33 0.08 0.1] );
+btn_SaveBundle = uicontrol(fLocal,'Style', 'pushbutton', 'String', 'Save this bundle','Unit','normalized', 'Position', [0.85 0.33 0.04 0.1] );
 btn_SaveBundle.Callback=@(src,evn)SaveBundle(src,evn,GetHyperB,fH,patchH,h_2DNodes,SelectBundle,newLines{SelectBundle} ) ;
 
 
@@ -154,11 +154,18 @@ btn_UuCheckAll.Callback=@(src,evn)UnCheckAll(src,evn,h_2DNodes,newNodes_3D) ;
 
 h_text = text(PlanarNodes(:,1), PlanarNodes(:,2) , strcat('\leftarrow',num2str(PlanarNodes(:,1)) ),'HitTest','off' ,'Clipping','on' ) ;
 checkH_ShowNT = uicontrol(fLocal, 'Style', 'checkbox','String', 'Show/Hide','Unit','normalized','Position', [0.9 0.58 0.04 0.03]);
-checkH_ShowNT.Callback=@(src,evn)showNT(src,evn,h_2DNodes,h_text)  ;
+
+Str={'--'};
+for k=1:length(h_2D_lines) ;  Str{k}=strcat('Cylinder  ',num2str(k));    end
+popup_OneCylXover = uicontrol(fLocal, 'Style', 'popup','String',Str,'Unit','normalized','Position', [0.9 0.33 0.08 0.05]);
+
+
 
 middle = 0.5*(PlanarNodes(1:2:end,:) +   PlanarNodes(2:2:end,:) ) ;
 Diff_nm =  0.34* (PlanarNodes(2:2:end,1) -  PlanarNodes(1:2:end,1)) ;
 h_lengthLabel=text(middle(:,1), middle(:,2) , strcat('\downarrow',num2str(Diff_nm,3),' nm' ),'HitTest','off' ,'VerticalAlignment','bottom','Clipping','on') ;
+checkH_ShowNT.Callback=@(src,evn)showNT(src,evn,h_2DNodes,h_text ,h_lengthLabel)  ;
+
 % for k=1:length(h_lengthLabel)
 %     h_lengthLabel(k).
 % end
@@ -173,7 +180,7 @@ AssignIcon( btn_SelectRightAll,'EditRight.jpg' ) ;btn_SelectRightAll.TooltipStri
 AssignIcon( btn_CheckAll,'EditAll.jpg' ) ; btn_CheckAll.TooltipString='Select all nodes.' ; 
 AssignIcon( btn_UuCheckAll,'EditNone.jpg' ) ; btn_UuCheckAll.TooltipString='Unselect all nodes.' ; 
 % align([btn_SelectLeftAll btn_SelectRightAll btn_CheckAll btn_UuCheckAll],'distribute','bottom');
-align([btn_SelectLeftAll btn_SelectRightAll btn_CheckAll btn_UuCheckAll btn_UpdateBundle btn_SaveBundle],'distribute','top');
+align([btn_SelectLeftAll btn_SelectRightAll btn_CheckAll btn_UuCheckAll btn_UpdateBundle btn_SaveBundle popup_OneCylXover],'distribute','top');
 
 
 AssignIcon( btn_UpdateBundle,'EditUpdate.jpg' ); btn_UpdateBundle.TooltipString='Temporary change the cylinder model. After editing all bundles, it needs to update the mechanism in Assebmly by exporting all bundle again. ' ;
@@ -208,8 +215,8 @@ for k=1:size(CylCenters,1)
     
 end
 % AllPoints
-plot(AllPoints(:,1),AllPoints(:,2) ,'k','LineWidth',2 ,'HitTest','off' ) ;
-text(CylCenters(:,1),CylCenters(:,2) ,num2str((1:k)') ,'FontSize',16 ,'HorizontalAlignment','center','HitTest','off' ,'Visible','on') ;
+plot(AllPoints(:,1),AllPoints(:,2) ,'k','LineWidth',2 ,'HitTest','off'  ) ;
+text(CylCenters(:,1),CylCenters(:,2) ,num2str((1:k)') ,'FontSize',16 ,'HorizontalAlignment','center','HitTest','off' ,'Visible',ForSnapshot) ;
 
 MarkDistance1 = plot(AllPoints(1,1),AllPoints(1,2),'Visible','off' ,'LineWidth',2.5,'Color','m') ;
 MarkDistance2 = text(AllPoints(1,1),AllPoints(1,2),'','Visible','off','FontSize',18,'Color','m') ;
@@ -224,7 +231,7 @@ for k= 1: size(PairListForThisBundle,1)
 % plotPairingInax3{k} = plot()
    SaveXY(1,:) =  [ mean(pt_h{PairListForThisBundle(k,1)}.Vertices(:,1)),mean(pt_h{PairListForThisBundle(k,1)}.Vertices(:,2))] ;
    SaveXY(2 ,:) =  [ mean(pt_h{PairListForThisBundle(k,2)}.Vertices(:,1)),mean(pt_h{PairListForThisBundle(k,2)}.Vertices(:,2))] ;
-   plotPairingInax3{k} = plot(SaveXY(:,1) , SaveXY(:,2),'Color','b' ,'LineWidth',3 , 'Visible','off') ; 
+   plotPairingInax3{k} = plot(SaveXY(:,1) , SaveXY(:,2),'Color','b' ,'LineWidth',3 , 'Visible',ForSnapshot) ; 
     plotPairingInax3{k}.UserData.Ind= k ;
     plotPairingInax3{k}.UserData.State= 0 ;
 end
@@ -243,6 +250,44 @@ for k=1:size(CylCenters,1)
     uistack(pt_h{k},'top')
     pt_h{k}.ButtonDownFcn= @(src,evn)clickPatch(src,evn, pt_h,MarkDistance1,MarkDistance2) ;
 end
+
+Str={'--'};
+for k=1:size(plotPairingInax3,1) ;  Str{k}=strcat('C',num2str(PairListForThisBundle(k,1)),'--','C',num2str(PairListForThisBundle(k,2)  ) );    end
+popup_PairCylinder = uicontrol(fLocal, 'Style', 'popup','String',Str,'Unit','normalized','Position', [0.9 0.83 0.08 0.05]);
+align([btn_SaveBundle popup_PairCylinder],'distribute','bottom');
+
+
+[u,v] =find(Bundle.CylAdjMat); Ind= u<v ;
+u=u(Ind); v=v(Ind);
+UVlist = sortrows([u,v]) ;
+BlockAdjacency_h = cell(size(UVlist,1) ,1) ;
+for k =1 : size(UVlist ,1)
+    p_a =  mean(pt_h{UVlist(k,1)}.Vertices) ;
+    p_b =  mean(pt_h{UVlist(k,2)}.Vertices) ;
+    
+    p_avg =  0.5*(p_a+p_b) ;
+    
+    BlockAdjacency_h{k}=scatter(p_avg(1),p_avg(2),86 ,'o','filled' ,'visible',ForSnapshot) ;
+    BlockAdjacency_h{k}.CData= [1,0,0 ] ;
+    BlockAdjacency_h{k}.UserData.IndAdjUV = k ;
+    BlockAdjacency_h{k}.UserData.UVlist = UVlist ;
+    BlockAdjacency_h{k}.MarkerEdgeColor= [0,0,0] ;
+    BlockAdjacency_h{k}.MarkerFaceColor = 'none' ;
+    
+    if ~isempty(GetHyperB.SaveBlockAdjacency)
+        if ~isempty(GetHyperB.SaveBlockAdjacency{SelectBundle})
+            if ismember(UVlist(k,:),  GetHyperB.SaveBlockAdjacency{SelectBundle},'rows')
+                BlockAdjacency_h{k}.MarkerFaceColor = 'flat' ;  % show if have been specified.
+            end
+        end
+    end
+end
+for k=1 : size(UVlist ,1)
+    BlockAdjacency_h{k}.ButtonDownFcn = @(src,evn)BlockAdj(src,evn,BlockAdjacency_h ,GetHyperB, SelectBundle ) ;
+end
+
+
+
 drawnow; 
 for k= 1: size(PairListForThisBundle ,1)
  uistack(plotPairingInax3{k},'top')
@@ -303,12 +348,434 @@ uistack(newNodes_3D,'top') ; % July 17 2019
 
 popup3.TooltipString = 'Assign single-stranded lengths to the selected connections';
 
+popup_PairCylinder.Callback=@(src,evn)SelectPair(src,evn,h_2D_lines,PairListForThisBundle ,Bundle ,SelectBundle,ax2 ,newLines{SelectBundle})  ;
+popup_OneCylXover.Callback=@(src,evn)SelectCylinder(src,evn,h_2D_lines,Bundle,SelectBundle,ax2 ,newLines{SelectBundle})  ;
+
+
+%----------
+axes(ax2) ; 
+
+if ~isempty(GetHyperB.SaveInternalXovers)
+    IndInternal = GetHyperB.SaveInternalXovers(:,1) ==SelectBundle ;
+    ExistInterXover = GetHyperB.SaveInternalXovers(IndInternal,:) ;
+    SaveXY = zeros(6*size(ExistInterXover,1),2  ) ;
+    
+    for k = 1: size(ExistInterXover,1)
+        SaveXY(6*k-5:6*k-4 ,1 ) = ExistInterXover(k,3) ;
+        SaveXY(6*k-5:6*k-4 ,2 ) = ExistInterXover(k,[2,5]) ;
+        SaveXY(6*k-3 ,1:2 ) = [nan nan] ;
+        SaveXY(6*k-2:6*k-1 ,1 ) = ExistInterXover(k,9) ;
+        SaveXY(6*k-2:6*k-1 ,2 ) = ExistInterXover(k,[8,11]) ;
+        SaveXY(6*k ,1:2 ) = [nan nan] ;
+    end
+    if ~isempty(SaveXY)
+        ax2.UserData.hXover_CombineAll =plot(SaveXY(:,1),SaveXY(:,2),'r' )  ;
+        set(ax2.UserData.hXover_CombineAll,'LineWidth',1.5) ;
+        ax2.UserData.hXover_CombineAll.UserData.AcuXover =  ExistInterXover ;
+        ax2.UserData.hXover_CombineAll.ButtonDownFcn= @(src,evn)DeleteInternalXover(src,evn,ax2 ,GetHyperB) ;
+        uistack(ax2.UserData.hXover_CombineAll,'top')
+    end
+end
+
+hObject= fLocal;
+handles.output = hObject;
+
+% Update handles structure
+if ~isfield(handles,'plotHandles')
+    handles.plotHandles = [];
+end
+axLms= [ax2.XLim ;ax2.YLim ] ;
+h_VGuide = plot( mean(axLms(1,:))*ones(1,2), axLms(2,:),'Color',[251 225 200 160]/255 ,'LineWidth' ,5 ,'Tag','VGuide') ;
+handles.plotHandles = [handles.plotHandles ; h_VGuide];
+handles.axLms=axLms;
+handles.axes1 =gca ; set(handles.axes1,'Units','pixel')
+hold(handles.axes1,'on');
+set(hObject, ...
+    'WindowButtonDownFcn',   @mouseDownCallback, ...
+    'WindowButtonUpFcn',     @mouseUpCallback,   ...
+    'WindowButtonMotionFcn', @mouseMotionCallback);
+guidata(hObject, handles);
+ax2.UserData.axLms =axLms ;
+
+if ~isempty(GetHyperB.SaveBlockZRange)
+    SaveBlockZRange = GetHyperB.SaveBlockZRange{SelectBundle} ;
+    for k = 1 : size(SaveBlockZRange ,1)
+     h= rectangle('Position',[SaveBlockZRange(k,2) axLms(2,1) SaveBlockZRange(k,3)-SaveBlockZRange(k,2) axLms(2,2)-axLms(2,1)] ,'FaceColor',[0 .5 .5 0.5],'EdgeColor','k') ;
+     h.ButtonDownFcn =@(src,evn)DeleteBlockZ(src,evn,ax2 ,GetHyperB,SelectBundle) ;
+     ax2.UserData.RectangeH{k} = h  ;
+     ax2.UserData.hBlockZRange(k,:) =[SelectBundle, SaveBlockZRange(k,2) , SaveBlockZRange(k,3)] ;  
+    end
+end
+
+axes(ax1) ; 
+
+%         h= rectangle('Position',[Xleft YY(1) XRight-Xleft diff(YY)] ,'FaceColor',[0 .5 .5 0.5],'EdgeColor','k') ;
+%         
+%         if ~isfield(ax2.UserData,'hBlockZRange')
+%             ax2.UserData.hBlockZRange =[SelectBundle, Xleft , XRight] ;
+%             ax2.UserData.RectangeH{1} = h  ;
+%         else
+%             ax2.UserData.hBlockZRange =[ ax2.UserData.hBlockZRange ;[SelectBundle , Xleft , XRight] ];
+%             ax2.UserData.RectangeH{end+1} = h  ;
+%         end
+%         if isempty(GetHyperB.SaveBlockZRange)
+%             GetHyperB.SaveBlockZRange =ax2.UserData.hBlockZRange        ;
+%         else
+%             GetHyperB.SaveBlockZRange =ax2.UserData.hBlockZRange         ;
+%         end
 
 
 
 uiwait(fLocal);
 
 end
+
+function mouseDownCallback(figHandle,varargin)
+
+% get the handles structure
+handles = guidata(figHandle) ;
+
+% get the position where the mouse button was pressed (not released)
+% within the GUI
+set(figHandle,'Unit','pixel') ;
+currentPoint = get(figHandle, 'CurrentPoint');
+x            = currentPoint(1,1)  ;
+y            = currentPoint(1,2)  ;
+set(figHandle,'Unit','normalized') ;
+
+
+% get the position of the axes within the GUI
+axesPos = get(handles.axes1,'Position') ;
+minx    = axesPos(1) ; 
+miny    = axesPos(2) ;
+maxx    = minx + axesPos(3) ;
+maxy    = miny + axesPos(4) ;
+
+% is the mouse down event within the axes?
+if x>=minx && x<=maxx && y>=miny && y<=maxy
+%     sdf=3
+    % do we have graphics objects?
+    if isfield(handles,'plotHandles')
+        
+        currentPoint = get(handles.axes1, 'CurrentPoint') ;
+        x            = currentPoint(2,1);
+        y            = currentPoint(2,2);
+        
+        minDist      = Inf;
+        minHndl      = handles.plotHandles;
+
+       if  abs(mean(minHndl.XData)-currentPoint(1,1))<2
+            handles.mouseIsDown     = true;
+            handles.movingPlotHndle = minHndl;
+            handles.prevPoint       = [x y]; 
+            guidata(figHandle,handles);
+        end
+    end
+end
+end
+
+function mouseUpCallback(figHandle,varargin)
+
+% get the handles structure
+handles = guidata(figHandle);
+
+if isfield(handles,'mouseIsDown')
+    if handles.mouseIsDown
+        % reset all moving graphic fields
+        handles.mouseIsDown     = false;
+        handles.movingPlotHndle = [];
+        handles.prevPoint       = [];
+        
+        % save the data
+        guidata(figHandle,handles);
+    end
+end
+end
+
+function mouseMotionCallback(figHandle,varargin)
+
+% get the handles structure
+handles = guidata(figHandle);
+% handles.axLms
+if isfield(handles,'mouseIsDown')
+    
+    if handles.mouseIsDown
+        currentPoint = get(handles.axes1, 'CurrentPoint') ;
+        x            = currentPoint(2,1);
+        y            = currentPoint(2,2);
+        
+        % compute the displacement from previous position to current
+        xDiff = x - handles.prevPoint(1);
+%         yDiff = y - handles.prevPoint(2);
+        
+        % adjust this for the data corresponding to movingPlotHndle
+        xData = get(handles.movingPlotHndle,'XData');
+%         yData = get(handles.movingPlotHndle,'YData');
+       if         round(xData(1)+xDiff)<handles.axLms(1,1) ||  round(xData(1)+xDiff)>handles.axLms(1,2)
+           return
+       end
+
+
+        set(handles.movingPlotHndle,'XData',round(xData+xDiff));    % 'YData',yData+yDiff,
+        
+        handles.prevPoint = [x y];
+        title(strcat('Z = ', num2str(round(xData(1)+xDiff)), ' ''Ctrl'' or ''Shift'' to switch step size' )) ;
+        % save the data
+        guidata(figHandle,handles);
+    end
+end
+end
+
+
+
+% h_2D_lines,Bundle,SelectBundle ,ax2 ,newLines
+function SelectPair(src,evn,h_2D_lines,PairListForThisBundle ,Bundle ,SelectBundle,ax2 ,newLines)
+axes(ax2) ;
+PairList =  PairListForThisBundle(src.Value ,:) ;
+for k =1: length(h_2D_lines)
+    if ismember(k,PairList)
+        h_2D_lines{k}.LineWidth = 5 ;
+        newLines(k).LineWidth = 5 ;
+    else
+        h_2D_lines{k}.LineWidth = 1 ;
+         newLines(k).LineWidth = 1 ;        
+    end
+end
+List=[]; 
+CylMaster= PairList(1) ; CinMoveUp=  ~xor( ismember(CylMaster,Bundle.AGroup),Bundle.AGroupGoUp);
+AdjCylinder =PairList(2) ;
+for cyli = 1 : length(AdjCylinder)
+  CylInSlave=AdjCylinder(cyli) ;
+ Intersec=intersect(Bundle.Zbase1(CylMaster):Bundle.Zbase2(CylMaster) ,Bundle.Zbase1(CylInSlave):Bundle.Zbase2(CylInSlave));
+                         for Basej=1:length(Intersec)
+                            rnd=Intersec(Basej);
+                            if strcmp(Bundle.Lattice, 'Square')            %change for hybrid structure
+                                XOinZ= FindZ2SQ( CylMaster,CylInSlave,Bundle.CylInplanePosition,rnd,CinMoveUp);
+                            else
+                                XOinZ= FindZ2HC( CylMaster,CylInSlave,Bundle.CylInplanePosition,rnd,CinMoveUp);
+                            end
+                            if XOinZ<max([Bundle.Zbase2(CylMaster) Bundle.Zbase2(CylInSlave)]) && XOinZ> min([Bundle.Zbase1(CylMaster) Bundle.Zbase1(CylInSlave)])
+                                XOinZ2=  XOinZ -1+2*CinMoveUp;
+                                if CinMoveUp==0   %  debug result
+                                    XOinZ2=XOinZ2+1;
+                                    XOinZ=XOinZ+1;
+                                end
+                                OneXover=[SelectBundle,CylMaster,XOinZ,SelectBundle,CylInSlave,  XOinZ,...
+                                    SelectBundle,CylInSlave,XOinZ2,SelectBundle,CylMaster,  XOinZ2]  ;
+                                List=[ List; OneXover];
+                            end
+                         end  
+end
+ List=unique(List,'rows');
+ SaveXY = zeros(6*size(List,1),2  ) ;
+ for k = 1: size(List,1) 
+     SaveXY(6*k-5:6*k-4 ,1 ) = List(k,3) ;
+     SaveXY(6*k-5:6*k-4 ,2 ) = List(k,[2,5]) ;
+     SaveXY(6*k-3 ,1:2 ) = [nan nan] ;
+
+     SaveXY(6*k-2:6*k-1 ,1 ) = List(k,9) ;
+     SaveXY(6*k-2:6*k-1 ,2 ) = List(k,[8,11]) ;
+     SaveXY(6*k ,1:2 ) = [nan nan] ;
+
+ end
+ if isfield(ax2.UserData,'hXover_SCyl')
+     ax2.UserData.hXover_SCyl.XData=  SaveXY(:,1)' ;
+     ax2.UserData.hXover_SCyl.YData=  SaveXY(:,2)' ;
+     ax2.UserData.hXover_SCyl.UserData.List= List ;
+     
+ else
+     ax2.UserData.hXover_SCyl = plot(SaveXY(:,1),SaveXY(:,2),'k' ) ;
+     ax2.UserData.hXover_SCyl.UserData.List= List ;
+ end
+ ax2.UserData.hXover_SCyl.ButtonDownFcn=@(src,evn)Click_hXover_SCyl(src,evn) ;
+
+ if isfield(ax2.UserData,'hXover_Combine')
+ delete(ax2.UserData.hXover_Combine)
+ax2.UserData = rmfield(ax2.UserData,'hXover_Combine') ;
+%  sdfsf=3
+ end
+
+end
+
+function DeleteInternalXover(src,evn,ax2 ,GetHyperB)
+
+if evn.Button ==3
+    answer = questdlg('Are you sure to delete this internal Xover ?', ...
+        'Remove this crossover.', ...
+        'No','Yes','Yes');
+    switch answer
+        case 'No'
+            return
+    end
+
+    d=  (src.XData-evn.IntersectionPoint(1)).^2 + (src.YData-evn.IntersectionPoint(2)).^2  ;
+    Ind = find(d==min(d)) ;
+    IndGroupBy6 =  ceil(Ind/6) ;
+
+    OldXY = [src.XData ; src.YData ] ;
+    NewXY= OldXY; 
+    NewXY(:, 6*IndGroupBy6-5:6*IndGroupBy6) =[];
+    src.XData=NewXY(1,:) ;   src.YData=NewXY(2,:) ;
+    
+    OriXovers = src.UserData.AcuXover ;
+    RemoveXover =   OriXovers(IndGroupBy6,:) ;
+    OriXovers(IndGroupBy6,:) =[];
+    src.UserData.AcuXover=   OriXovers ;
+    
+    OriAllXover =GetHyperB.SaveInternalXovers  ;
+    [a,b] = ismember(RemoveXover ,  GetHyperB.SaveInternalXovers ,'rows' ) ;
+    GetHyperB.SaveInternalXovers(b,:) =[];
+    
+end
+% sdfsf=3
+%               if isempty(GetHyperB.SaveInternalXovers)
+%                 GetHyperB.SaveInternalXovers =ax2.UserData.hXover_CombineAll.UserData.AcuXover        ;                                          
+%               else
+%                 GetHyperB.SaveInternalXovers =union(GetHyperB.SaveInternalXovers,ax2.UserData.hXover_CombineAll.UserData.AcuXover ,'rows' )          ;                         
+%               end
+end
+
+function DeleteBlockZ(src,evn,ax2 ,GetHyperB,SelectBundle)
+if evn.Button ==3
+    answer = questdlg('Are you sure to delete this range ?', ...
+        'Recover crossover in this range.', ...
+        'No','Yes','Yes');
+    switch answer
+        case 'No'
+            return
+    end
+    
+    for k = 1 : length(ax2.UserData.RectangeH)
+        if isequal(ax2.UserData.RectangeH{k},src)
+            Ind =k ;
+        end
+    end
+    
+    delete(ax2.UserData.RectangeH{Ind}) ;
+    ax2.UserData.RectangeH(Ind) =[] ;
+    ax2.UserData.hBlockZRange(Ind, :) = [] ;
+    GetHyperB.SaveBlockZRange{SelectBundle} =ax2.UserData.hBlockZRange         ;
+    
+%  sdfsff=3
+   
+end
+
+% sdfsff=3
+
+end
+
+
+function SelectCylinder(src,evn,h_2D_lines,Bundle,SelectBundle ,ax2 ,newLines)
+axes(ax2) ;
+SelectLine = src.Value ;
+for k =1: length(h_2D_lines)
+    if ismember(k,SelectLine)
+        h_2D_lines{k}.LineWidth = 5 ;
+        newLines(k).LineWidth = 5 ;
+    else
+        h_2D_lines{k}.LineWidth = 1 ;
+        newLines(k).LineWidth = 1 ;        
+    end
+end
+List=[]; 
+CylMaster= SelectLine ; CinMoveUp=  ~xor( ismember(CylMaster,Bundle.AGroup),Bundle.AGroupGoUp);
+
+AdjCylinder =find(Bundle.CylAdjMat(SelectLine,:) ) ;
+for cyli = 1 : length(AdjCylinder)
+  CylInSlave=AdjCylinder(cyli) ;
+ Intersec=intersect(Bundle.Zbase1(CylMaster):Bundle.Zbase2(CylMaster) ,Bundle.Zbase1(CylInSlave):Bundle.Zbase2(CylInSlave));
+
+                         for Basej=1:length(Intersec)
+                            %                        if  ~isempty(Intersec)  &&  Intersec(end)-Intersec(1)>2*bound
+                            %                        rnd=randi([Intersec(1)+bound ,Intersec(end)-bound]);
+                            rnd=Intersec(Basej);
+                            if strcmp(Bundle.Lattice, 'Square')            %change for hybrid structure
+                                XOinZ= FindZ2SQ( CylMaster,CylInSlave,Bundle.CylInplanePosition,rnd,CinMoveUp);
+                            else
+                                XOinZ= FindZ2HC( CylMaster,CylInSlave,Bundle.CylInplanePosition,rnd,CinMoveUp);
+                            end
+                            
+                            if XOinZ<max([Bundle.Zbase2(CylMaster) Bundle.Zbase2(CylInSlave)]) && XOinZ> min([Bundle.Zbase1(CylMaster) Bundle.Zbase1(CylInSlave)])
+                                XOinZ2=  XOinZ -1+2*CinMoveUp;
+                                if CinMoveUp==0   %  debug result
+                                    XOinZ2=XOinZ2+1;
+                                    XOinZ=XOinZ+1;
+                                end
+                                OneXover=[SelectBundle,CylMaster,XOinZ,SelectBundle,CylInSlave,  XOinZ,...
+                                    SelectBundle,CylInSlave,XOinZ2,SelectBundle,CylMaster,  XOinZ2]  ;
+                                List=[ List; OneXover];
+                                %                         return
+                            end
+                        end
+  
+end
+ List=unique(List,'rows');
+ 
+ SaveXY = zeros(6*size(List,1),2  ) ;
+ for k = 1: size(List,1) 
+     SaveXY(6*k-5:6*k-4 ,1 ) = List(k,3) ;
+     SaveXY(6*k-5:6*k-4 ,2 ) = List(k,[2,5]) ;
+     SaveXY(6*k-3 ,1:2 ) = [nan nan] ;
+
+     SaveXY(6*k-2:6*k-1 ,1 ) = List(k,9) ;
+     SaveXY(6*k-2:6*k-1 ,2 ) = List(k,[8,11]) ;
+     SaveXY(6*k ,1:2 ) = [nan nan] ;
+
+ end
+ if isfield(ax2.UserData,'hXover_SCyl')
+     ax2.UserData.hXover_SCyl.XData=  SaveXY(:,1)' ;
+     ax2.UserData.hXover_SCyl.YData=  SaveXY(:,2)' ;
+     ax2.UserData.hXover_SCyl.UserData.List= List ;
+     
+ else
+     ax2.UserData.hXover_SCyl = plot(SaveXY(:,1),SaveXY(:,2),'k' ) ;
+     ax2.UserData.hXover_SCyl.UserData.List= List ;
+ end
+ ax2.UserData.hXover_SCyl.ButtonDownFcn=@(src,evn)Click_hXover_SCyl(src,evn) ;
+ 
+% if strcmp(Bundle.Lattice, 'Square')            %change for hybrid structure
+%     XOinZ= FindZ2SQ( CylMaster,CylInSlave,Bundle.CylInplanePosition,rnd,CinMoveUp);
+% else
+%     XOinZ= FindZ2HC( CylMaster,CylInSlave,Bundle.CylInplanePosition,rnd,CinMoveUp);
+% end
+
+% sdfsf=4 ;
+ if isfield(ax2.UserData,'hXover_Combine')
+ delete(ax2.UserData.hXover_Combine)
+ax2.UserData = rmfield(ax2.UserData,'hXover_Combine') ;
+%  sdfsf=3
+ end
+
+
+end
+
+function Click_hXover_SCyl(src,evn )
+% evn
+% src.XData
+ax2 =gca ;
+d=  (src.XData-evn.IntersectionPoint(1)).^2 + (src.YData-evn.IntersectionPoint(2)).^2  ;
+Ind = find(d==min(d)) ;
+IndGroupBy6 =  ceil(Ind/6) ;
+
+ PartXY = [src.XData(1,6*IndGroupBy6-5:6*IndGroupBy6) ; src.YData(1,6*IndGroupBy6-5:6*IndGroupBy6) ];     
+ if isfield(ax2.UserData,'hXover_Combine')
+     ax2.UserData.hXover_Combine.XData=  PartXY(1,:)' ;
+     ax2.UserData.hXover_Combine.YData=  PartXY(2,:)' ;
+     ax2.UserData.hXover_Combine.UserData.OneXover= src.UserData.List(IndGroupBy6,:) ;
+     
+ else
+     ax2.UserData.hXover_Combine = plot(PartXY(1,:)',PartXY(2,:)','r' ) ;
+     ax2.UserData.hXover_Combine.UserData.OneXover= src.UserData.List(IndGroupBy6,:) ;
+ end
+
+
+
+sdff=3;
+
+end
+
+
+
 
 function ChangePair(src,evn,plotPairingInax3 )
 WhichLine =[];
@@ -358,6 +825,53 @@ ax3=gca;
 % QQQQsdfssdfsgf=3
 end
 
+function BlockAdj(src,evn,BlockAdjacency_h  ,GetHyperB, SelectBundle)
+
+src;
+% sdfsf=3
+if evn.Button==3
+    src.MarkerFaceColor = 'none' ;
+    
+else
+    src.MarkerFaceColor = 'flat' ;        
+end
+
+UVlist= BlockAdjacency_h{1}.UserData.UVlist ;
+Inds=[];
+for k =1:length(BlockAdjacency_h)
+   if BlockAdjacency_h{k}.MarkerFaceColor=='flat'
+%        BlockAdjacency_h{k}.UserData ;
+       Inds=union(Inds,k) ;
+   end   
+end
+
+% SelectBundle
+% UVlist(Inds , :) 
+
+ if isempty(GetHyperB.SaveBlockAdjacency)
+     GetHyperB.SaveBlockAdjacency= cell(length( GetHyperB.containBundle) ,1 ) ;
+      GetHyperB.SaveBlockAdjacency{SelectBundle} =UVlist(Inds , :) ;
+ else
+      GetHyperB.SaveBlockAdjacency{SelectBundle} =UVlist(Inds , :) ;
+     
+ end
+
+
+%             if Check ==1
+%          if isempty(GetHyperB.SavePremPairManual)
+%             GetHyperB.SavePremPairManual = GetHyperB.SavePremPair ;
+%             GetHyperB.SavePremPairManual.CellPairList{SelectBundle}  =ax3.UserData.CurrentPair ;
+%          else
+%             GetHyperB.SavePremPairManual.CellPairList{SelectBundle}  =ax3.UserData.CurrentPair ;
+%          end
+%         else
+%             fw=msgbox('Temporary change. Data not update. Check cylinder neighbors or ends  !! ');
+%          
+%         end
+    
+    
+end
+
 
 function  clickPatch(src,evn, pt_h,MarkDistance1,MarkDistance2)
     if evn.Button==1
@@ -405,15 +919,21 @@ function  clickPatch(src,evn, pt_h,MarkDistance1,MarkDistance2)
 end
 
 
-function showNT(src,evn,h_2DNodes ,h_text)
+function showNT(src,evn,h_2DNodes ,h_text ,h_lengthLabel )
 
 if  src.Value==1
     for k=1: length(h_text)
         h_text(k).Visible='on' ;
     end
+    for k2 = 1 : length(h_lengthLabel)
+        h_lengthLabel(k2).Visible='on' ;
+    end
 else
     for k=1: length(h_text)
         h_text(k).Visible='off' ;
+    end
+    for k2 = 1 : length(h_lengthLabel)
+        h_lengthLabel(k2).Visible='off' ;
     end
 end
 
@@ -851,7 +1371,82 @@ end
  ax = gca ;
  
 switch  evn.Character
-   
+    
+    case 'z' % deactive the crossovers in certain Z range
+%         handles = guidata(gcf);
+        h_VGuide = findobj(gca,'Tag','VGuide') ; XCurrent = h_VGuide.XData(1) ;
+        prompt = {'Enter the left limit from the guide:','Enter the right limit from the guide:'};
+        dlgtitle = strcat('Enter Z range for deactivating crossovers. ', ' from Z =' ,num2str(XCurrent));
+        dims = [1 80];
+        definput = {'5','5'};
+        answer = inputdlg(prompt,dlgtitle,dims,definput) ;
+        if isempty(answer) ; return;end
+%         ax2.UserData.axLms
+        
+        Xleft =  XCurrent-str2num(answer{1}) ; XRight =  XCurrent+str2num(answer{2}) ;
+        YY= ax2.UserData.axLms(2,:) ;
+        [Xleft YY(1) XRight-Xleft diff(YY)] ;
+        
+        
+        h= rectangle('Position',[Xleft YY(1) XRight-Xleft diff(YY)] ,'FaceColor',[0 .5 .5 0.5],'EdgeColor','k') ;
+        h.ButtonDownFcn =@(src,evn)DeleteBlockZ(src,evn,ax2 ,GetHyperB,SelectBundle) ;
+
+        if ~isfield(ax2.UserData,'hBlockZRange')
+            ax2.UserData.hBlockZRange =[SelectBundle, Xleft , XRight] ;
+            ax2.UserData.RectangeH{1} = h  ;
+        else
+            ax2.UserData.hBlockZRange =[ ax2.UserData.hBlockZRange ;[SelectBundle , Xleft , XRight] ];
+            ax2.UserData.RectangeH{end+1} = h  ;
+        end
+        if isempty(GetHyperB.SaveBlockZRange)
+            GetHyperB.SaveBlockZRange= cell(size(GetHyperB.containBundle)) ;
+            GetHyperB.SaveBlockZRange{SelectBundle} =ax2.UserData.hBlockZRange        ;
+        else
+            GetHyperB.SaveBlockZRange{SelectBundle} =ax2.UserData.hBlockZRange         ;
+        end
+        
+        
+        
+    case 'x'  % save Xovers
+         if isfield(ax2.UserData,'hXover_Combine')
+             if isfield(ax2.UserData,'hXover_CombineAll')
+                 AddXY = [ax2.UserData.hXover_Combine.XData ;ax2.UserData.hXover_Combine.YData] ;
+                 ax2.UserData.hXover_CombineAll.XData=[ax2.UserData.hXover_CombineAll.XData ,AddXY(1,:) ];
+                 ax2.UserData.hXover_CombineAll.YData=[ax2.UserData.hXover_CombineAll.YData ,AddXY(2,:) ];
+                 ax2.UserData.hXover_CombineAll.UserData.AcuXover = [ax2.UserData.hXover_CombineAll.UserData.AcuXover ; ax2.UserData.hXover_Combine.UserData.OneXover];
+             else
+                 ax2.UserData.hXover_CombineAll = copyobj(ax2.UserData.hXover_Combine,ax2) ;
+                 set(ax2.UserData.hXover_CombineAll,'LineWidth',1.5) ;
+                 ax2.UserData.hXover_CombineAll.UserData.AcuXover =  ax2.UserData.hXover_Combine.UserData.OneXover ;
+                 ax2.UserData.hXover_CombineAll.ButtonDownFcn= @(src,evn)DeleteInternalXover(src,evn,ax2 ,GetHyperB) ;
+ 
+             end
+              if isempty(GetHyperB.SaveInternalXovers)
+                GetHyperB.SaveInternalXovers =ax2.UserData.hXover_CombineAll.UserData.AcuXover        ;                                          
+              else
+                GetHyperB.SaveInternalXovers =union(GetHyperB.SaveInternalXovers,ax2.UserData.hXover_CombineAll.UserData.AcuXover ,'rows' )          ;                         
+              end
+         end
+        
+         
+         
+    case 'X'
+         if isfield(ax2.UserData,'hXover_Combine')
+             if isfield(ax2.UserData,'hXover_CombineAll')
+                 AddXY = [ax2.UserData.hXover_Combine.XData ;ax2.UserData.hXover_Combine.YData] ;
+                 ax2.UserData.hXover_CombineAll.XData=[ax2.UserData.hXover_CombineAll.XData ,AddXY(1,:) ];
+                 ax2.UserData.hXover_CombineAll.YData=[ax2.UserData.hXover_CombineAll.YData ,AddXY(2,:) ];
+                 ax2.UserData.hXover_CombineAll.UserData.AcuXover = [ax2.UserData.hXover_CombineAll.UserData.AcuXover ; ax2.UserData.hXover_Combine.UserData.OneXover];
+             else
+                 ax2.UserData.hXover_CombineAll = copyobj(ax2.UserData.hXover_Combine,ax2) ;
+                 set(ax2.UserData.hXover_CombineAll,'LineWidth',1.5) ;
+                 ax2.UserData.hXover_CombineAll.ButtonDownFcn= @(src,evn)DeleteInternalXover(src,evn,ax2 ,GetHyperB) ;
+                 ax2.UserData.hXover_CombineAll.UserData.AcuXover =  ax2.UserData.hXover_Combine.UserData.OneXover ;
+             end
+         end
+         
+    case 'h'
+        implay('EditBundle.mp4');
     case 'q'
         ax.XLim= ax.XLim + interval ;
     case 'Q'
@@ -884,15 +1479,15 @@ switch  evn.Character
         ax.ZLim= (ax.ZLim -mean(ax.ZLim))/R + mean(ax.ZLim)   ;
         
         %---------------
-    case 'x'
+    case 'o'
         axis equal;
         fprintf('set axis equal \n')
-    case 'X'
+    case 'O'
         axis auto
         fprintf('set axis auto \n')
     case 'P'
         fprintf('Capturing..... \n') ;
-        print('-r100',gcf,'SnapShotFromEditBundle_r100','-dpng')  ;
+        print('-r100',gcf,'SnapShotFromEditBundle_r300','-dpng')  ;
         fprintf('Captured current figure. \n') ;
     case 'p'
         fprintf('Capturing..... \n') ;

@@ -17,6 +17,8 @@ function  LegendBoxing_cadnano( src,evn,axMain )
                '(4) Exporting Json files will generate two .json files with identical routings due to hybrid lattice.';
                '(5) Users can change staple colors by selecting staples(multiple) in the list, then clicking on somewhere in the tab not the table, and press \bf[t]\rm to change colors.';
                '(6) If users have used overhang tool, the ''OverHangOption'' button will be active. The ''Optimized Seq'' option generates sequences that have minimal complementarity to the scaffold, especially single stranded portions.';
+               '(7) Staple colors can be assigned according to the 5'' ends in the bundles or the staple graph(considering nicks to form a long chain).'
+               '(8) For multi-scaffold, the numbers of complementary bases between I scaffolds and J staples are shown in the GUI. Move the mouse to see the values and highlight the staple in the main window. Notice a analysis report in command line. '
                '';
                'Viewing box:'; 'Use MATLAB default icons to rotate or zoom in/out globally. ' ;
                'Whenever use the keybroad to interact, remember to cancel rotate/zoom mode!! ';
@@ -26,8 +28,8 @@ function  LegendBoxing_cadnano( src,evn,axMain )
                '[o]: axis equal \bf{(recommended for 3D panel)}\rm';
                '[O]: axis auto ';
                '[n][N]: axis normal \bf{(recommended for 2D panel)}\rm';
-               '[p]: print current view under directory.';       '';
-
+               '[p]: print current view under directory.';      
+               '[h]: watch tutorial movie.';
               
                
                } ;
