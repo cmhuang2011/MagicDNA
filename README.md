@@ -14,6 +14,7 @@ The user can directly clone this MagicDNA repository through git. Alternatively,
 Required: MATLAB v2017a, Bioinformatics Toolbox, Statistics and Machine Learning Toolbox
 
 Tutorial download: https://www.dropbox.com/s/4f7t5hdiggmnf6f/MagicDNA_workshop.pptx?dl=0 
+
 YouTube channel for tutorial movies: https://www.youtube.com/channel/UCpI3shjsdy89Xg2iVt-ZYCw
 
 Question, comment, and suggestion to:
