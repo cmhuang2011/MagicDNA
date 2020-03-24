@@ -10,7 +10,7 @@ function  LegendBoxing_customHC( src,evn,axMain )
                 'This UI provides five different customized cross-sections for HC cross-sections.';
                 'Please use this UI \bfwith the Sketch tab to convert lines into bundles\rm as Top-down approach. After conversion, these bundles can be saved into the library for Bottom-up approach.';
                 '';
-                '(1): Select one fo five custom cross-sections to change with the popup menu.';
+                '(1): Select one of five custom cross-sections to change with the popup menu.';
                 '(2): Use left clicks on the centers of the circles(cylinders)(\color{blue}blue dot\color{black}) to make it into \color{red}red\color{black} as selected.';
                 '(3): Right clicks can do reversely.';
                 '(4): The bottom-left text shows the numbers of two groups of cylinders which have opposite directions.';

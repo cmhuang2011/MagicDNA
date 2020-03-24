@@ -18,14 +18,14 @@ function  LegendBoxing_Scaf( src,evn,axMain )
                'Before doing this step, the mechanism must be assembled with desired lengths of ssDNA scaffold in Assembly and ssScaf tabs.';
                '';
                '\fontsize{11}Click \bf{MultiScaf}\rm button to split \bfone\rm long scaffold into N cycles by applying N-1 Xovers.'  ;
-               'This is a stochastic method to find the Xovers satisfying the lenth constraints.'
+               'This is a stochastic method to find the Xovers satisfying the length constraints.'
                'This means the process may not be successful and requires multiple trials. '
                'Default setting is to use the specified N and percentage for the lower and upper bounds, which can be changed in the file \bffunctions/SplitScafToMultiScaf.m.\rm'
                
                '';
                'Viewing box:'; 'Use MATLAB default icons to rotate or zoom in/out globally.' ;
-               'Whenever use the keybroad to interact, \bfremember to cancel rotate/zoom mode!!\rm ';
-               'x y z limits can be changed inividually by keys,[Q][W][E][A][S][D](case sensitive).'; 
+               'Whenever use the keyboard to interact, \bfremember to cancel rotate/zoom mode!!\rm ';
+               'x y z limits can be changed individually  by keys,[Q][W][E][A][S][D](case sensitive).'; 
                '[Q][A] = +- X direction ' ; '[W][S] = +- Y direction '; '[E][D] = +- Z direction '  ;'Lower cases: Shifting(- or +) the limit in the corresponding direction.' ; 'Upper cases: Expand(+)/shrink(-) the limit in the corresponding direction. '    
 
                '';

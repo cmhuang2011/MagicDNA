@@ -652,7 +652,7 @@ classdef hyperbundle <handle
                     TTtext(Exxtraindex:Exxtraindex+8)=[];
                 end
                 
-                
+                [status, msg, msgID] = mkdir('cadnano_jsonfile') ;  % Feb 13 2020, create the folder saving the JSON file, preventing  this folder won't be create in package process, Feb 13 2020
                 JsonFolder=[ pwd filesep 'cadnano_jsonfile' filesep];
                 fileID = fopen([JsonFolder file_name],'w');
                 fprintf(fileID,TTtext);
@@ -1068,7 +1068,7 @@ classdef hyperbundle <handle
                 end
                 StapToScaf_Corr_NBase; colorbar;
                 fffH.UserData.StapToScaf_Corr_NBase=StapToScaf_Corr_NBase ;
-                
+                fH2.UserData.StapToScaf_Corr=StapToScaf_Corr ;
                 hlink =linkprop([ax axx],{ 'YLim' }); % The axes should stay aligned
                 ax.UserData.hlink=hlink ;
                 
@@ -6124,10 +6124,10 @@ classdef hyperbundle <handle
             B=triu(AdjM) ;
             C=tril(AdjM) ;
             II= (B)~=transpose(C) ;
-            if sum(sum(II))>0
-                fsdfsf=1213
-            end
-            
+%             if sum(sum(II))>0
+%                 fsdfsf=1213
+%             end
+%             
             AdjM=B+transpose(B) ;
             obj.BundleAdjM=AdjM ;
             
@@ -7500,8 +7500,9 @@ classdef hyperbundle <handle
                 %
                 tH.Data=regParams.M;
                 [regParams.R, regParams.t;0,0,0,1];
+%                QQ= obj.containBundle{iBundle(Bi)}.TransformMatrix2 
                 obj.containBundle{iBundle(Bi)}.TransformMatrix2= [regParams.R, regParams.t;0,0,0,1]*obj.containBundle{iBundle(Bi)}.TransformMatrix2 ;
-                
+%                     QQ2=   obj.containBundle{iBundle(Bi)}.TransformMatrix2
                 XYZALL= [  patchH{3,iBundle(Bi)}.XData; patchH{3,iBundle(Bi)}.YData; patchH{3,iBundle(Bi)}.ZData];
                 xyz=mean(XYZALL,2);
                 textBundle{iBundle(Bi)}.Position=xyz';
@@ -7838,6 +7839,46 @@ classdef hyperbundle <handle
             title( sprintf(' # of scaffold = %i ',kc ))
             surfH.UserData.SacfR=SacfR ;
         end % end of plotScafR_cylindermodelMulti
+        
+        function pH=plotScaf3Dposition(obj,Xovers)
+            figure(3252);clf ; hold on ;
+            obj.plotScafR_cylindermodelMulti(2, 'Gradient') ;
+            AllGXYZ=cell(1,length(obj.containBundle));
+            for k=1:length(obj.containBundle)
+                AllGXYZ{k}=obj.containBundle{k}.CylinderXYZGlobal ;
+            end
+            
+            
+            pH=cell(size(Xovers,1) ,1) ;
+            for kc= 1 :size(Xovers,1)
+                SacfR= Xovers(kc,:) ; SacfR=reshape(SacfR',3,4)' ;
+                plotXYZ=zeros(size(SacfR));
+                for k=1:size(SacfR,1)
+                    bundle=SacfR(k,1);  Cyl=SacfR(k,2);
+                    alpha=SacfR(k,3)- obj.containBundle{bundle}.Zbase1(Cyl);
+                    
+                    beta=obj.containBundle{bundle}.Zbase2(Cyl)-SacfR(k,3);
+                    P= AllGXYZ{bundle}(Cyl,1:3);
+                    Q=AllGXYZ{bundle}(Cyl,4:6);
+                    XYZ=(beta*P + alpha*Q )/(alpha+beta);
+                    plotXYZ(k,:)=XYZ;
+                end
+                
+                plotXYZ=[plotXYZ(1:2,:) ; [nan nan nan] ;plotXYZ(3:4,:) ];
+                % SSplotXYZ=size(plotXYZ) ;
+                % plot3(plotXYZ(:,1), plotXYZ(:,2), plotXYZ(:,3) )
+                x = plotXYZ(:,1)';
+                y = plotXYZ(:,2)';
+                z = plotXYZ(:,3)';
+                pH{kc}=plot3(x,y,z, 'k','LineWidth',1.5);
+            end
+            
+            
+            
+        end % end of plotScaf3Dposition
+        
+        
+        
         
         function obj=ApartStaplesSimple(obj, varargin)
             %                         skipBase= GetHyperB.skipBase ;

@@ -12,11 +12,11 @@ function  LegendBoxing_SketchStep2( src,evn,axMain )
        if evn.IntersectionPoint(2)>0
            CreateStruct.Interpreter = 'tex';
            CreateStruct.WindowStyle = 'modal';
-           STR={'\fontsize{11}This step involves converting line model to cylinder model(bundles) by assigning lengths, cross-sections, gradiences, and initail orientations.The 3D lines are related to the table shown in right.'  ;
+           STR={'\fontsize{11}This step involves converting line model to cylinder model(bundles) by assigning lengths, cross-sections, gradiences, and initial orientations.The 3D lines are related to the table shown in right.'  ;
                '\color{red}{Red(x)}, \color{green}{green(y)}, \color{black}and \color{blue}blue(z) lines\color{black} refer the local coordinate of each line.';
                '\color{blue}{Blue lines}\color{black} are pointing from Z1 sides to Z2 sides.'              
                'Each row in the table provides the required parameters of converting lines to bundles.';
-               'Detailed discrpitions are availalble in the table tooltip.' ;
+               'Detailed descriptions are available in the table tooltip.' ;
                '';
                'UI functions:' ; '';
                'Local coordinate can be flipped in x and z directions by left clicks.';

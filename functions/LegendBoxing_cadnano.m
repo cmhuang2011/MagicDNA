@@ -21,8 +21,8 @@ function  LegendBoxing_cadnano( src,evn,axMain )
                '(8) For multi-scaffold, the numbers of complementary bases between I scaffolds and J staples are shown in the GUI. Move the mouse to see the values and highlight the staple in the main window. Notice a analysis report in command line. '
                '';
                'Viewing box:'; 'Use MATLAB default icons to rotate or zoom in/out globally. ' ;
-               'Whenever use the keybroad to interact, remember to cancel rotate/zoom mode!! ';
-               'x y z limits can be changed inividually by keys,[Q][W][E][A][S][D](case sensitive).'; 
+               'Whenever use the keyboard  to interact, remember to cancel rotate/zoom mode!! ';
+               'x y z limits can be changed individually by keys,[Q][W][E][A][S][D](case sensitive).'; 
                '[Q][A] = +- X direction ' ; '[W][S] = +- Y direction '; '[E][D] = +- Z direction \bf{(Not for 2D diagram)}\rm'  ;'Lower cases: Shifting(- or +) the limit in the corresponding direction.' ; 'Upper cases: Expand(+)/shrink(-) the limit in the corresponding direction. '    
                '';
                '[o]: axis equal \bf{(recommended for 3D panel)}\rm';

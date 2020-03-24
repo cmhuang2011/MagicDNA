@@ -1,6 +1,7 @@
 function ssOption = GUIAsignSSInfo3( HyperB,fH,Prev_ssDNA,assemblyAxs_View )
 % This is the GUI for assign details about ss connetion and tuning the
 % orientation
+%-
 %   Detailed explanation goes here
 
 % fH= figure('name','single-strand options','Position',[300 300 800 600],'numbertitle','off');

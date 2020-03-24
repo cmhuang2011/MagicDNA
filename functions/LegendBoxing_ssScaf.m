@@ -24,8 +24,8 @@ function  LegendBoxing_ssScaf( src,evn,axMain )
                '';
                'Viewing box:'; 
                'Use MATLAB default icons to rotate or zoom in/out globally. ' ;
-               'Whenever use the keybroad to interact, remember to cancel rotate/zoom mode!! ';'';
-               'x y z limits can be changed inividually by keys,[Q][W][E][A][S][D](case sensitive) or by clicking on the bottom half of the legend(left to right, -+x, -+y, -+z).'; 
+               'Whenever use the keyboard to interact, remember to cancel rotate/zoom mode!! ';'';
+               'x y z limits can be changed individually by keys,[Q][W][E][A][S][D](case sensitive) or by clicking on the bottom half of the legend(left to right, -+x, -+y, -+z).'; 
                '[Q][A] = +- X direction '; 
                '[W][S] = +- Y direction '; 
                '[E][D] = +- Z direction '  ;

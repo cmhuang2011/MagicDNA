@@ -70,16 +70,11 @@ NoDriftTraj=TrajOri ;
 % NoDriftTraj=zeros(size(TrajOri,1),9,size(TrajOri,3) ) ;
 
 % StackTraj =reshape(permute(TrajOri(:,1:3,:),[1, 3,2]) ,size(TrajOri,1)*size(TrajOri,3),3 );
-StackTraj =reshape(permute(TrajOri(:,1:3,:)-0.4*TrajOri(:,4:6,:),[1, 2,3]) ,size(TrajOri,1)*3,size(TrajOri,3) );
-
-%-------------considering drifting
-[coeff,score,latent,~,explained,PCA_mean] = pca(StackTraj') ;
-MeanConf = reshape(PCA_mean, size(TrajOri,1) ,3);
-oxDNA_ex.MeanConf=MeanConf;
 % MeanConf=oxDNA_ex.MeanConf ;
 % MeanConf = oxDNA_ex.Traj(:,1:3,101) ; % temp
 % figure; hold on; scatter3(MeanConf(:,1),MeanConf(:,2),MeanConf(:,3),'.')
-B3byNaLL=  transpose(MeanConf(:,1:3) );   % target
+
+B3byNaLL=  transpose(TrajOri(:,1:3,1 ) );   % target
 
 for frI= 1:size(TrajOri,3)
     A3byNaLL=  transpose(TrajOri(:,1:3,frI )) ;  % which will be transformed.
@@ -100,6 +95,13 @@ toc
 
 oxDNA_ex.Traj=NoDriftTraj ;
 
+StackTraj =reshape(permute(NoDriftTraj(:,1:3,:)-0.4*NoDriftTraj(:,4:6,:),[1, 2,3]) ,size(NoDriftTraj,1)*3,size(NoDriftTraj,3) );
+%-------------considering drifting
+[coeff,score,latent,~,explained,PCA_mean] = pca(StackTraj') ;
+MeanConf = reshape(PCA_mean, size(TrajOri,1) ,3);
+oxDNA_ex.MeanConf=MeanConf;
+
+
 
 %-------------RMSD
 Ref_RMSD = NoDriftTraj(:,1:3,1 ); %initial configuration as reference
@@ -112,39 +114,14 @@ RMSD_By_Frame = zeros(size(TrajOri,3),1 ) ;
 %
 for k=1:length(RMSD_By_Frame)
     dxyz = NoDriftTraj(:,1:3,k ) - Ref_RMSD ;
-    %     dxyz=dxyz(ReceptorPara.RecTraceBase(2),:) ;  % only for Receptor
-    %     %  dxyz=dxyz(:,1) ;  % only for Receptor
+    %     dxyz=dxyz(ReceptorPara.RecTraceBase(2),:) ;  % 
+    %     %  dxyz=dxyz(:,1) ;  % 
     RMSD_By_Frame(k) = rms(dxyz(:)) ;
     %     RMSD_By_xComp(k) = rms(dxyz(:,1)) ;
     %     RMSD_By_yComp(k) = rms(dxyz(:,2)) ;
     %     RMSD_By_zComp(k) = rms(dxyz(:,3)) ;
     
 end
-
-
-% % histogram(RMSD_By_Frame(100:end)) ;
-% N_mov=1 ;
-%
-% figure(534);clf; hold on ;
-% % p1=plot(movmean(RMSD_By_Frame,N_mov) ,'LineWidth',2 );
-% p2=plot(movmean(RMSD_By_xComp,N_mov),'LineWidth',1 );
-% % p3=plot(movmean(RMSD_By_yComp,N_mov),'LineWidth',1 );
-% % p4=plot(movmean(RMSD_By_zComp,N_mov),'LineWidth',1 );
-%
-% legend([p1, p2,p3,p4],{'RMSD from Eq.', 'RMSD_z from Eq.', 'RMSD_x from Eq.', 'RMSD_y from Eq.'})
-
-% return
-% figure(214);hold on ;
-% QQ=8*0;
-% subplot(3,8,QQ+[1:3]) ;
-% plot(movmean(RMSD_By_xComp,N_mov),'LineWidth',1 );
-% subplot(3,8,QQ+[4]) ;
-% histogram(movmean(RMSD_By_xComp,N_mov),'LineWidth',1 );
-% N_mov=20;
-% subplot(3,8,QQ+[5:7]) ;
-% plot(movmean(RMSD_By_xComp,N_mov),'LineWidth',1 );
-% subplot(3,8,QQ+[8]) ;
-% histogram(movmean(RMSD_By_xComp,N_mov),'LineWidth',1 );
 
 
 
@@ -249,23 +226,9 @@ CClorData=RMSF_By_Base ;
 
 [f,g,h]=plot3k({Ref_RMSF(:,1) , Ref_RMSF(:,2) ,Ref_RMSF(:,3)}, 'ColorData',CClorData ,'ColorRange',[min(RMSF_By_Base), max(RMSF_By_Base)] ) ;
 str={'RMSF' ; strcat( 'Avg = ', num2str(mean(RMSF_By_Base))  ) };
+ax=gca; ax.UserData.Ref_RMSF=Ref_RMSF; 
 title(str) ;
-%-----------For Receptor, Receptor with k1 or k3
-% figure(381) ; clf ; hold on;
-% RecpEnd = 15448 ;
-% scatter3(Ref_RMSF(1:RecpEnd,1 ) , Ref_RMSF(1:RecpEnd,2) ,Ref_RMSF(1:RecpEnd,3 ) ,'b') ;
-% scatter3(Ref_RMSF(RecpEnd:end,1 ) , Ref_RMSF(RecpEnd:end,2 ) ,Ref_RMSF(RecpEnd:end,3 ) ,'g') ;
-% scatter3(Ref_RMSF(ReceptorPara.Inds,1 ) , Ref_RMSF(ReceptorPara.Inds,2) ,Ref_RMSF(ReceptorPara.Inds,3 ) ,'r') ;
-% scatter3(Ref_RMSF(ReceptorPara.RecTraceBase,1 ) , Ref_RMSF(ReceptorPara.RecTraceBase,2) ,Ref_RMSF(ReceptorPara.RecTraceBase,3 ) ,'c') ;
-%
-%
-%
-% RMSF_By_Base( ReceptorPara. RecTraceBase-0) ;
-% fprintf(' RMSF of traced bases =  %4.2f \n', RMSF_By_Base( ReceptorPara. RecTraceBase-0)) ;
-%
-% fprintf('mean RMSF =  %4.2f \n', mean(RMSF_By_Base( ReceptorPara. RecTraceBase-0))) ;
-% toc
-% sdf=3
+
 
 
 end

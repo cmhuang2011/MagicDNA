@@ -635,10 +635,11 @@ end
 % end
 
 function  ChangeLocalOrientation(src,evn,LocalXYZ_h)
-Edgei_XYZ= src.UserData.Edgei_XYZ ;
+clc;
+Edgei_XYZ= src.UserData.Edgei_XYZ  ; % [edgeInd, {1, 2,3 }=[xyz] ]
 ax=gca;
 % Edgei_XYZ(1) = find(ax.UserData.RemainOriEdge==Edgei_XYZ(1) ) ;
-
+% evn
 if evn.Button==1   % left click -> flipping x and z direction 
     XvecData = [LocalXYZ_h{Edgei_XYZ(1) ,1}.XData ; LocalXYZ_h{Edgei_XYZ(1) ,1}.YData ;LocalXYZ_h{Edgei_XYZ(1) ,1}.ZData;]  ;
     ZvecData = [LocalXYZ_h{Edgei_XYZ(1) ,3}.XData ; LocalXYZ_h{Edgei_XYZ(1) ,3}.YData ;LocalXYZ_h{Edgei_XYZ(1) ,3}.ZData;]  ;
@@ -666,7 +667,75 @@ elseif evn.Button==3   % right click -> rotating about z-axis 90 degree
     LocalXYZ_h{Edgei_XYZ(1) ,2}.YData=XvecData(2,:) ;
     LocalXYZ_h{Edgei_XYZ(1) ,2}.ZData=XvecData(3,:) ;
    
+elseif    evn.Button==2   % middle click -> custom angle  % 03052020
     
+    
+    
+    XvecData = [LocalXYZ_h{Edgei_XYZ(1) ,1}.XData ; LocalXYZ_h{Edgei_XYZ(1) ,1}.YData ;LocalXYZ_h{Edgei_XYZ(1) ,1}.ZData;]  ;
+    YvecData = [LocalXYZ_h{Edgei_XYZ(1) ,2}.XData ; LocalXYZ_h{Edgei_XYZ(1) ,2}.YData ;LocalXYZ_h{Edgei_XYZ(1) ,2}.ZData;]  ;
+    
+    Vx = [LocalXYZ_h{Edgei_XYZ(1) ,1}.XData ; LocalXYZ_h{Edgei_XYZ(1) ,1}.YData ;LocalXYZ_h{Edgei_XYZ(1) ,1}.ZData;]   ;
+    Vx = diff(Vx,1,2)   ; Vx=Vx/norm(Vx) ;
+    Vy = [LocalXYZ_h{Edgei_XYZ(1) ,2}.XData ; LocalXYZ_h{Edgei_XYZ(1) ,2}.YData ;LocalXYZ_h{Edgei_XYZ(1) ,2}.ZData;]  ;
+    Vy = diff(Vy,1,2)   ; Vy=Vy/norm(Vy) ;
+    Vz = [LocalXYZ_h{Edgei_XYZ(1) ,3}.XData ; LocalXYZ_h{Edgei_XYZ(1) ,3}.YData ;LocalXYZ_h{Edgei_XYZ(1) ,3}.ZData;]  ;
+    Vz = diff(Vz,1,2)   ; Vz=Vz/norm(Vz) ;
+    
+    Result = AskLocalSnapOrRotationInterval ;
+    if strcmp(Result.Decision ,'Rotate')
+        LocalAxis=Vz ;   theta= Result.RotationInterval ;
+        if isempty(theta)
+            fprintf('Invalid input!! \n')
+            warndlg('Invalid input!!','Warning');
+            return
+        end
+       
+        RMat = RotationAxisToRotaionMatrix( LocalAxis,theta )      ;
+        NewVxVy = [RMat*Vx  RMat*Vy  ]  ;
+        
+        X_3x2= [ XvecData(:,1) ,XvecData(:,1) + 2* NewVxVy(:,1)   ] ;
+        Y_3x2= [ YvecData(:,1) ,YvecData(:,1) + 2* NewVxVy(:,2)  ] ;
+        LocalXYZ_h{Edgei_XYZ(1) ,1}.XData=X_3x2(1,:) ;    LocalXYZ_h{Edgei_XYZ(1) ,1}.YData=X_3x2(2,:) ;    LocalXYZ_h{Edgei_XYZ(1) ,1}.ZData=X_3x2(3,:) ;
+        LocalXYZ_h{Edgei_XYZ(1) ,2}.XData=Y_3x2(1,:) ;    LocalXYZ_h{Edgei_XYZ(1) ,2}.YData=Y_3x2(2,:) ;    LocalXYZ_h{Edgei_XYZ(1) ,2}.ZData=Y_3x2(3,:) ;
+    elseif strcmp(Result.Decision ,'Snap')
+        
+        LocalAxis=Vz ;   thetas=-45:0.1:45 ;
+        RMats = zeros(3,3,length(thetas)) ;
+        NewVxs= zeros(3,length(thetas)) ;
+        for k=1:length(thetas)
+            RMats(:,:,k) = RotationAxisToRotaionMatrix( LocalAxis,thetas(k) )      ;
+            NewVxs(:,k) =   RMats(:,:,k)*Vx      ;
+        end
+        %     NewVxVy = [RMat*Vx  RMat*Vy  ]  ;
+        
+%         RMats
+        NewVxs ;
+        SnapXto=[ 1 ,0,0 ; -1 , 0, 0;   0 ,1,0 ;0 , -1, 0; 0 ,0,1 ;0 , 0, -1 ]'; 
+        MaxVal=zeros(6,1) ;
+        M1= repmat(SnapXto(:,1), 1,size(NewVxs,2));MaxVal(1) = max(sum(NewVxs.*M1 ) );
+        M2= repmat(SnapXto(:,2), 1,size(NewVxs,2));MaxVal(2) = max(sum(NewVxs.*M2 ) );
+        M3= repmat(SnapXto(:,3), 1,size(NewVxs,2));MaxVal(3) = max(sum(NewVxs.*M3 ) );
+        M4= repmat(SnapXto(:,4), 1,size(NewVxs,2));MaxVal(4) = max(sum(NewVxs.*M4 ) );
+        M5= repmat(SnapXto(:,5), 1,size(NewVxs,2));MaxVal(5) = max(sum(NewVxs.*M5 ) );
+        M6= repmat(SnapXto(:,6), 1,size(NewVxs,2));MaxVal(6) = max(sum(NewVxs.*M6 ) );
+        MaxVal;
+        
+        IndMaxCase =  find(MaxVal==max(MaxVal)); IndMaxCase=IndMaxCase(1) ;
+%         IndMaxCase=SnapXto(IndMaxCase,:) ;
+        Mx_Max = repmat(SnapXto(:,IndMaxCase), 1,size(NewVxs,2));
+        Vals= sum(NewVxs.*Mx_Max ); 
+        IndSnap=find(Vals==max(Vals));IndSnap=IndSnap(1) ;
+        RMatBest = RMats(:,:,IndSnap) ;
+        NewVxVy = [RMatBest*Vx  RMatBest*Vy  ]  ;
+        
+        X_3x2= [ XvecData(:,1) ,XvecData(:,1) + 2* NewVxVy(:,1)   ] ;
+        Y_3x2= [ YvecData(:,1) ,YvecData(:,1) + 2* NewVxVy(:,2)  ] ;
+        LocalXYZ_h{Edgei_XYZ(1) ,1}.XData=X_3x2(1,:) ;    LocalXYZ_h{Edgei_XYZ(1) ,1}.YData=X_3x2(2,:) ;    LocalXYZ_h{Edgei_XYZ(1) ,1}.ZData=X_3x2(3,:) ;
+        LocalXYZ_h{Edgei_XYZ(1) ,2}.XData=Y_3x2(1,:) ;    LocalXYZ_h{Edgei_XYZ(1) ,2}.YData=Y_3x2(2,:) ;    LocalXYZ_h{Edgei_XYZ(1) ,2}.ZData=Y_3x2(3,:) ;
+       
+
+% sdfsd=3
+    end
     
 end
 

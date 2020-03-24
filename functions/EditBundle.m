@@ -216,7 +216,7 @@ for k=1:size(CylCenters,1)
 end
 % AllPoints
 plot(AllPoints(:,1),AllPoints(:,2) ,'k','LineWidth',2 ,'HitTest','off'  ) ;
-text(CylCenters(:,1),CylCenters(:,2) ,num2str((1:k)') ,'FontSize',16 ,'HorizontalAlignment','center','HitTest','off' ,'Visible',ForSnapshot) ;
+text(CylCenters(:,1),CylCenters(:,2) ,num2str((1:k)') ,'FontSize',16 ,'HorizontalAlignment','center','HitTest','off' ,'Visible',ForSnapshot,'clipping', 'on') ;
 
 MarkDistance1 = plot(AllPoints(1,1),AllPoints(1,2),'Visible','off' ,'LineWidth',2.5,'Color','m') ;
 MarkDistance2 = text(AllPoints(1,1),AllPoints(1,2),'','Visible','off','FontSize',18,'Color','m') ;

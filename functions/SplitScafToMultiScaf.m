@@ -49,10 +49,11 @@ if length(GetHyperB.ScafRouting) ==1   % start with one cycle case
     %-----------
 
     %     figure; hist(Closeness)
-    Threshold = (NBaseOri/Npiece)*(1-Acc/100)*0.95 ; % diectly use lower bound*0.95
+    Threshold = (NBaseOri/Npiece)*(1-Acc/100)*0.95  ;% diectly use lower bound*0.95
 %     Threshold = NBaseOri/Npiece*0.8 ;  % 80% of the mean value 
     XoverIndRemain=  and(Closeness> Threshold,Closeness< (NBaseOri-Threshold)) ;
     XoverList= XoverList(XoverIndRemain ,:) ;
+%     XoverList=XoverList(XoverList(:,1)~=1 ,:)  ;% CM
 %     XoverList= XoverList(Closeness> Threshold ,:) ;
 %     XoverList= XoverList(Closeness< (NBaseOri-Threshold) ,:) ;
     fprintf('Exclude Xovers which bridge two positions on the one scaffold within %i bases. \n',Threshold)
@@ -103,7 +104,12 @@ if length(GetHyperB.ScafRouting) ==1   % start with one cycle case
                         IndS =QuerryXoverInd_BCB( OneXoverFromList,BaseRoutOri ) ;
                         %                     fprintf('Ind %i : %s \n' ,Nc ,num2str(IndS(:)'));
                         fprintf('Trial %i/%i Cut %i : %s \n' ,RunMoreTime,Max_Number_Of_Trial,Nc ,num2str(CheckAll'));
+                        
                         allGood(Nc) = 1;
+                        for ccShift= 1: length(AllRoutingNew)
+                            AllRoutingNew{ccShift}  =circshift(  AllRoutingNew{ccShift} ,4) ;  %CM
+                        end
+                        
                         AllRouting= AllRoutingNew;
                         
                         break ;

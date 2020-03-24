@@ -18,7 +18,7 @@ function  LegendBoxing( src,evn,axMain )
                '[Q][A] = +- X direction ' ; '[W][S] = +- Y direction '; '[E][D] = +- Z direction '  ;'' ;
                'Connectivity: ';'Yellow togglebuttons are for showing the connectivity between bundles.';'To change the connectivity, either:(1)click on lines in graph. (2)edit the table. (3)Use the query panel. '            ;'';
                'Viewing: ' ; 'Use MATLAB default icons to rotate or zoom in/out. ' ; 'x y z limits can change by clicking(left or middle) on the bottom half of the legend.'; '';
-               'Helpful tools:' ;'[U]: \bfU\rmndo the previous bundle manipulation'; '[L]: esitmate scaffold \bfL\rmength, show in command line'; '[K]: esitmate a portion of scaffold length, show in command line '
+               'Helpful tools:' ;'[U]: \bfU\rmndo the previous bundle manipulation'; '[L]: estimate scaffold \bfL\rmength, show in command line'; '[K]: estimate a portion of scaffold length, show in command line '
                '[C]: print the \bfC\rmylinder model as .bild to Chimera'; '[I]: generate an assembly with re-ordered bundle index.'; '[h]: watch tutorial movie.' ;
 %                '[M]: save current bundle transformation \bfM\rmatrices and connectivity as Temp.mat under directory. When converting the line models from STEP to Assembly, if the number of edges matches, the program will load this data to expedite local modification.'
                } ;

@@ -2,10 +2,10 @@ function  LegendBoxing_SketchStep1( src,evn,axMain )
 %UNTITLED3 Summary of this function goes here
 %   Detailed explanation goes here
 % axMain.UserData
-       axes(axMain);
-%        evn
-       Rulers= linspace(0,1,7) ;
-       Locats= sum(evn.IntersectionPoint(1)>=Rulers);
+%        axes(axMain);
+% %        evn
+%        Rulers= linspace(0,1,7) ;
+%        Locats= sum(evn.IntersectionPoint(1)>=Rulers);
        
 %        [icondata,iconcmap] = imread('trees.tif'); 
        

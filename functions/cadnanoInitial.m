@@ -132,7 +132,7 @@ for k=1:length(plotH); plotH{k}.HitTest='off' ; end
 %------2D scaffold
 surfH= cell( length( GetHyperB.scafC5), 1)  ;  % scaffold 2D surf graphic handles in cell
 ScafForScatterAll = []; ScafForScatterAllSpacing= [] ;
-ScafForScatterIndividual = cell( length( GetHyperB.scafC5), 1)  ;  %scaffold 2D surf graphic handles in cell, later inserting spacing ~= C5 
+ScafForScatterIndividual = cell( length( GetHyperB.scafC5), 1)  ;  %scaffold 2D surf graphic handles in cell, later inserting spacing ~= C5
 
 for scaf_j = 1 : length( GetHyperB.scafC5)
     CellMat= GetHyperB.scafC5{scaf_j} ;
@@ -151,8 +151,8 @@ for scaf_j = 1 : length( GetHyperB.scafC5)
     [~,IndC5] = ismember( ScafForScatter(:,1) ,GetHyperB.RelateTable(:,5) ) ;
     IndB = GetHyperB.RelateTable(IndC5,1) ;
     IndB(GetHyperB.RelateTable(IndC5,2)==-1 )= length(GetHyperB.containBundle)+1 ;
-    ScafForScatter(:,1 ) =  ScafForScatter(:,1 )  + (IndB-1)*2 ;  % insert spacing , here insert spacing so ~= C5
     ScafForScatterIndividual{scaf_j} = ScafForScatter ;
+    ScafForScatter(:,1 ) =  ScafForScatter(:,1 )  + (IndB-1)*2 ;  % insert spacing , here insert spacing so ~= C5
     if scaf_j==1
         ScafForScatterAllSpacing=   ScafForScatter ;
     else
@@ -225,7 +225,7 @@ for scaf_j = 1 : length( GetHyperB.scafC5)
     
     surfH{scaf_j}.HitTest= 'off' ;
 end
-% GetHyperB.ScafAllBase = ScafForScatterIndividual; % adapt to multi-scaffold
+GetHyperB.ScafAllBase = ScafForScatterIndividual; % adapt to multi-scaffold
 
 
 sH =scatter(ScafForScatterAllSpacing(:,2),5*ScafForScatterAllSpacing(:,1),54 ,'s' ,'filled','Tag','sH') ;
@@ -238,7 +238,6 @@ sH.UserData.SFC_C4notation = SFC_C4notation ;
 sH.MarkerFaceColor='none' ;
 sH.UserData.GetHyperB = GetHyperB ;
 
-% sdfsf=3
 %------scaf234556...., closing strand
 if strcmp(GetHyperB.UserWantOH,'Yes')
     
@@ -252,7 +251,7 @@ if strcmp(GetHyperB.UserWantOH,'Yes')
     
     CornerNotation=cell(length(GetHyperB.ClosingStrand.ConnScaf2),1) ;   % for closing strand
     Scaf2H=cell(size(CornerNotation) ) ;
-  
+    
     
     for k=1:length(GetHyperB.ClosingStrand.ConnScaf2)
         Conn =GetHyperB.ClosingStrand.ConnScaf2{k} ;
@@ -439,14 +438,14 @@ for scaf_j = 1 : length( GetHyperB.scafC5)
         surfH{k}.Visible ='off';
     end
     surfH3D{scaf_j}.Visible ='on';
-    surfH{scaf_j}.Visible ='on';    
+    surfH{scaf_j}.Visible ='on';
     
     %     UIControl_FontSize_bak = get(0, 'DefaultUIControlFontSize');  %
     %     change default fontsize and turn it back
     %     set(0, 'DefaultUIControlFontSize', 18);
     %     set(0, 'DefaultUIControlFontSize', UIControl_FontSize_bak);
     %
-        
+    
     list = {'p7249','p7560','p7704', 'p8064', 'pCS3_L_7560', 'pCS4_7557', 'pCS5_7559' ,'other' ,'randomScaf'};
     strShow = strcat('Select scaffold(',num2str(scaf_j) ,'/', num2str(length( GetHyperB.scafC5)),')',' Current Scaf length =', num2str(size(ScafForScatterIndividual{scaf_j},1 )),'. Containing non-ATCG cause random Scaf seq '  ) ;
     fprintf(strcat(' Current Scaf length =', num2str(size(ScafForScatterIndividual{scaf_j},1 )),'\n') ) ;
@@ -457,13 +456,13 @@ for scaf_j = 1 : length( GetHyperB.scafC5)
     %     str= ['\fontsize{10}' str newline  'Specify the numbers of piceses to cut: ' ];
     
     UIControl_FontSize_bak = get(0, 'DefaultUIControlFontSize');
-    set(0, 'DefaultUIControlFontSize', 14); 
+    set(0, 'DefaultUIControlFontSize', 14);
     % insdati = menu('Can you please help me?','Yes','No')
     
     opts.Interpreter = 'tex';
     [indx,tf] = listdlg('PromptString',strShow,'ListString',list,'SelectionMode','single' ,'ListSize', [500,250] );
     set(0, 'DefaultUIControlFontSize', UIControl_FontSize_bak);
-
+    
     if tf ==1
         switch indx
             case 1
@@ -536,7 +535,7 @@ accMultiScafLengths = cumsum(MultiScafLength) ;
 accMultiScafLength1=[1; accMultiScafLengths(1:end-1) ];
 
 
-  btn4.Enable='off';
+btn4.Enable='off';
 for k= 1:length( GetHyperB.StapList3)
     CornerRout = GetHyperB.StapList3{k} ;
     BaseR_notyet =interpolateBase(  CornerRout )  ;
@@ -557,20 +556,20 @@ for k= 1:length( GetHyperB.StapList3)
         else
             CylindesForSSstap  = StapBaseR(:,1) ;
             [~ ,bCyl] = ismember(CylindesForSSstap ,  GetHyperB.RelateTable(:,5) ) ;
-%             GetHyperB.RelateTable(:,2)~=-1
+            %             GetHyperB.RelateTable(:,2)~=-1
             IsFakeCyls=   GetHyperB.RelateTable(bCyl,2)==-1;
             QQ=seqcomplement(pSeqAll(indbase) ) ;
-         
+            
             QQ(tf==0)='?' ;
             QQ(and(IsFakeCyls==0,tf==0)   ) ='T' ;       % know it's located on cylinders from cylinder model, not pseudo cylinder due to staple overhang.
             
-            if sum(QQ=='?')>0 
-                fprintf(' Detect non-paired staple bases on pseudo-cylinder(Not from cylinder model) . May due to overhang.  ' ) 
+            if sum(QQ=='?')>0
+                fprintf(' Detect non-paired staple bases on pseudo-cylinder(Not from cylinder model) . May due to overhang.  ' )
             else
-                fprintf(' Detect non-paired staple bases on cylinder model. May due to PolyT (Force them to T).  ' )  
-            end            
+                fprintf(' Detect non-paired staple bases on cylinder model. May due to PolyT (Force them to T).  ' )
+            end
         end
-          fprintf('\n')
+        fprintf('\n')
     elseif  max(indbase)>length(pSeqAll)
         
         QQ=seqcomplement(pSeqExt(indbase) ) ;
@@ -613,10 +612,10 @@ for k= 1:length( GetHyperB.StapList3)
     
     StapOnWhichScaf(k,BelongScaf ) =1 ;
     StapSeq{k,6} = strcat('Scaf : ',' ' ,num2str(find( BelongScaf ) )  ) ;
-  
+    
 end
-% GetHyperB.ScafAllBase = ScafForScatterIndividual; % adapt to
-% multi-scaffold % move to forward for better debugging
+% % % % % GetHyperB.ScafAllBase = ScafForScatterIndividual; % adapt to
+% % % % % multi-scaffold % move to forward for better debugging
 
 GetHyperB.StapAllBase = StapAllBaaeCell;
 GetHyperB.ScafUnUsed = ScafUnUsed;
@@ -636,8 +635,9 @@ if ~isempty(QQ) % if have saved overhangs sequences , July 3 2019
     GetHyperB.ScafUnUsedSeq = UnUsedSeq ;
 end
 
+LL= cellfun(@length,StapAllBaaeCell) ;
 % %------------ hard code
-LL= cellfun(@length,StapAllBaaeCell) ; StapL_Thres = 10 ;
+% StapL_Thres = 10 ;
 % if sum(LL<=StapL_Thres) >0
 % fprintf('ignore staples with lengths below than %s. Better to run again Preview \n', num2str(StapL_Thres)) ;
 % StapAllBaaeCell=StapAllBaaeCell(LL>StapL_Thres) ;
@@ -648,7 +648,6 @@ LL= cellfun(@length,StapAllBaaeCell) ; StapL_Thres = 10 ;
 
 
 btn4.Callback= @(src,evn)overhangSeq(src,evn,StapSeq,CornerNotation,GetHyperB,ScafForScatterAll,Scaf2H) ;
-sdfsf=3;
 % btn3.Cal
 t_json.Data =StapSeq;
 t_json.UserData.BeforeOHSeq =StapSeq ;
@@ -658,15 +657,12 @@ t_json.CellSelectionCallback = @(src,evn)tabelSelectHighLight(src,evn,pStapleH,p
 % t_json. ButtonDownFcn=@(sr,evn)tabelButton(src,evn) ;
 % t_json.CellEditCallback= @(src,evn)tabelButton(src,evn,pStapleH,plotH) ;
 
-
-
-
 fprintf('finish  initial cadnano \n') ;
 toc
 
 % setGOfontsize( gctab , 10 , {'UIControl'} )  % set fontsize for uicontrol in this tab
 f25=figure(25);clf;
- f25.Name='Staple length distribution' ; set(f25,'NumberTitle','off');
+f25.Name='Staple length distribution' ; set(f25,'NumberTitle','off');
 histogram(LL,1:1:max(LL));
 title(strcat('Staple length distribution. # of strands=' ,num2str(length(LL)), ' Tol. Base=',num2str(sum(LL))  ) ) ;
 
@@ -719,15 +715,15 @@ end
 % profile viewer
 opts.Interpreter = 'tex';
 opts.Default = 'No';
- answer = questdlg('\fontsize{15} Inspect Scaffold and Staple routing mapping ?'  , ...
-                'Inspect or not?', ...
-                'Yes','No',opts);
- if strcmp(answer ,'Yes')           
-GetHyperB.InspectRouting(t_json,  pStapleH,  plotH ,jsonSlider2);
- end
- 
- fprintf('End of preview  \n') ;
- 
+answer = questdlg('\fontsize{15} Inspect Scaffold and Staple routing mapping ?'  , ...
+    'Inspect or not?', ...
+    'Yes','No',opts);
+if strcmp(answer ,'Yes')
+    GetHyperB.InspectRouting(t_json,  pStapleH,  plotH ,jsonSlider2);
+end
+
+fprintf('End of preview  \n') ;
+
 end
 
 function ShowHideScaf(src,evn,surfH3D,surfH)
@@ -944,8 +940,8 @@ for k= 1:length(StapSeq)
         
         QQ(and(indExceedScaf,indNotOverHang )) ='*';
         QQ(indOri==0) ='T';
-%         fprintf('Should not happen !!! \n ')
-         fprintf('Found single-stranded staple without scaffold, Not due to overhang. Assign These bases sequece as T (PolyT case). Strand = %i !!! \n ',k) ;
+        %         fprintf('Should not happen !!! \n ')
+        fprintf('Found single-stranded staple without scaffold, Not due to overhang. Assign These bases sequece as T (PolyT case). Strand = %i !!! \n ',k) ;
     else
         %         if k==44
         %             sdf=3
@@ -1104,7 +1100,7 @@ if ~isempty(h_bingraph)  && ~isempty(evn.Indices)
     QQ(QQ==Inf)=0 ;
     max(max(QQ)) ;
     [Start,End]=find(QQ==max(max(QQ))) ;
-%     P = shortestpath(h_bingraph.UserData.Graph,Neighbors(Start),Neighbors(End)) ;
+    %     P = shortestpath(h_bingraph.UserData.Graph,Neighbors(Start),Neighbors(End)) ;
     P = shortestpath(h_bingraph.UserData.Graph,Neighbors(Start(1)),Neighbors(End(1))) ;
     
     Neighbors=P ;  % update order
@@ -1300,17 +1296,17 @@ elseif evn.Button==3
 end
 
 
-    
+
 Neighbors =  edgebinsWeak{edgesWeak(Ind)}  ;
 
 for k=1:length(pStapleH)
-        if ismember(k,Neighbors )
-            pStapleH{k}.LineWidth =5;        plotH{k}.LineWidth =5 ;
-            pStapleH{k}.Color(4) = 1 ;      plotH{k}.Color(4) = 1 ;
-        else
-            pStapleH{k}.LineWidth =2 ;       plotH{k}.LineWidth =2 ;
-            pStapleH{k}.Color(4) =jsonSlider2.Value ;  plotH{k}.Color(4)=jsonSlider2.Value ;
-        end
+    if ismember(k,Neighbors )
+        pStapleH{k}.LineWidth =5;        plotH{k}.LineWidth =5 ;
+        pStapleH{k}.Color(4) = 1 ;      plotH{k}.Color(4) = 1 ;
+    else
+        pStapleH{k}.LineWidth =2 ;       plotH{k}.LineWidth =2 ;
+        pStapleH{k}.Color(4) =jsonSlider2.Value ;  plotH{k}.Color(4)=jsonSlider2.Value ;
+    end
 end
 QQ = distances(src.UserData.Graph,Neighbors',Neighbors') ;
 QQ(QQ==Inf)=0 ;

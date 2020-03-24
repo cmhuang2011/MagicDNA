@@ -70,7 +70,7 @@ choice.UseMethod='Auto';    hyperB.choice.UseMethod='Auto';
 % print('-r100',gcf,'Image3_r100','-dpng');
 % Wait for d to close before running to completion
 
-uiwait(d);
+uiwait(d);  
 
     function popup_callback1(popup,event)
         idx = popup.Value;
