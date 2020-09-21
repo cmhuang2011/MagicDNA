@@ -17,6 +17,18 @@ Tutorial download: https://www.dropbox.com/s/4f7t5hdiggmnf6f/MagicDNA_workshop.p
 
 YouTube channel for tutorial movies: https://www.youtube.com/channel/UCpI3shjsdy89Xg2iVt-ZYCw
 
+MATLAB Run-time version: 
+
+To use MagicDNA without MATLAB, users are required to install MATLAB Run-time from the Mathwork website, according to your operation system. This package was compiled with Run-time v9.2 and users have to use this version (v9.2) of MATLAB-Runtime. Due to the limitation of certain MATLAB functions in Run-time, we removed the instruction movies in the software package but they are still available on the YouTube channel. Please see the user manual for how to setup the environment variables for Linux and Mac.
+
+(i) Windows:
+https://www.dropbox.com/sh/b02k7q6owrvkujg/AABWBehUE9jyXSiDrVRhwYOja?dl=0
+(ii) Linux:
+https://www.dropbox.com/sh/li2vnw4n3qhbzp7/AACLJgFUOj2yU2BsiHVxHxUOa?dl=0
+(iii) Mac:
+https://www.dropbox.com/sh/26n182tcegruozn/AACp0h3ebhmV5dFahU_9pPVPa?dl=0
+
+
 Questions, comments, and suggestions to:
 Chao-Min Huang   
 huang.2011@osu.edu
