@@ -60,7 +60,8 @@ ss_oxDNA = uitab('Parent', Sub_group_mech, 'Title',  replace(TStrO,"Square","Sim
 
 SubSub_group_oxDNA = uitabgroup('Parent', ss_oxDNA);
 sss_Confforce= uitab('Parent', SubSub_group_oxDNA, 'Title',  replace(TStrO,"Square","Topogoly and Conf"),'Tag' , 'sss_Confforce' );
-% sss_pattern= uitab('Parent', SubSub_group_oxDNA, 'Title',  replace(TStrO,"Square","pattern"),'Tag','sss_pattern');
+% sss_pattern= uitab('Parent', SubSub_group_oxDNA, 'Title',  replace(TStrO,"Square","pattern"),'Tag','sss_pattern' );
+
 sss_Confforce.ButtonDownFcn =@(src,evn)ssSTEP_Button(src,evn);
 
 

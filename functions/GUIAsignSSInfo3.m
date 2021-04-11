@@ -160,7 +160,6 @@ for fconni=1:size(HyperB.ForcedConnectList,1)
     PB=PBCell{1};
     
     ppH{fconni}=plot3([PA(1);PB(1)], [PA(2);PB(2)], [PA(3);PB(3)] ,'b','LineWidth',1) ;
-    ppH{fconni}.ButtonDownFcn=@(src,evn)selectConnection(src,evn);
     ppH{fconni}.UserData.BCB0=OneConnec;
     ppH{fconni}.UserData.BCBCur=OneConnec;
     if ~ismember(OneConnec(1:3),YYY,'rows') && ~ismember(OneConnec(4:6),YYY,'rows')  %Both End nodes not selectable
@@ -171,7 +170,10 @@ for fconni=1:size(HyperB.ForcedConnectList,1)
     ppH{fconni}.UserData.labelL=text(mean( ppH{fconni}.XData ),mean( ppH{fconni}.YData ),mean( ppH{fconni}.ZData ),'\leftarrow 0', 'clipping', 'on','FontSize',16 ) ;
     ppH{fconni}.UserData.labelL.HitTest= 'off'  ;
 end
-
+for kss = 1:length(ppH)
+    ppH{kss}.ButtonDownFcn=@(src,evn)selectConnection(src,evn,ppH);
+end
+    
 % plotHelixH=cell( length(HyperB.containBundle) , 20);
 SaveXYZforPlot3= zeros(10000,3) ; nS =1 ;
 for iB=1:length(HyperB.containBundle)
@@ -596,12 +598,30 @@ uiwait(d);
     end   % end fcn UpdateSSConnection
 
 
-    function selectConnection(src,evn)
+    function selectConnection(src,evn,ppH)
         if  evn.Button==1
             src.Color=[1,0,0];
         elseif evn.Button==3
             src.Color=[0,0,1];
         end
+%         ppH
+        nR =0 ; nB=0 ;
+        for k = 1 :length(ppH)
+            if ~isempty(ppH{k})
+                
+                if sum(ppH{k}.Color ==[1,0,0] ) ==3
+                    nR =nR+1 ;
+                elseif sum(ppH{k}.Color ==[0,0,1] ) ==3
+                    nB=nB+1 ;
+                end
+            end
+        end
+%             [nR , nB]
+     strTT=strcat('\color[rgb]{1 0 0}Selected(Left) ', num2str(nR),' \color[rgb]{0 0 1}Non-Selected(Right)', num2str(nB),'  \color[rgb]{0.2 0.2 0.2}non-changeable' ) ;
+     
+     title(strTT);
+%       title('\color[rgb]{1 0 0}Selected(Left)  \color[rgb]{0 0 1}Non-Selected(Right)  \color[rgb]{0.2 0.2 0.2}non-changeable');
+  
     end  % end fcn UpdateSSConnection
 
 

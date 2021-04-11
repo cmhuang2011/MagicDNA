@@ -46,6 +46,12 @@ Vec=GetHyperB.RelateTable(:,4);
 TTRelateVec=Vec(index);
 WQER =union(TTRelateVec,[],'stable');
 GetHyperB.RelateVec=WQER';
+GetHyperB.CustomSkipAndInsertion = false; % whenever using routing algorithm, reset to Default
+for k =1:length(GetHyperB.containBundle)
+GetHyperB.containBundle{k}.skipPosition=[];
+GetHyperB.containBundle{k}.InsertPosition=[];    
+end
+
 %-----------
 % GetHyperB.StapList3=GetHyperB.StapList2;
 

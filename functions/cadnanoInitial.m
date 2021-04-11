@@ -7,6 +7,7 @@ function cadnanoInitial( src,evn,jsonSlider1,jsonSlider2,jsonPop ,jsonPop2)
 
 tic;
 fH=gcf;
+
 fprintf('initial cadnano \n') ;
 
 ax= findobj(fH,'Tag','json3D') ;
@@ -27,7 +28,8 @@ axes(ax) ;
 ss_Assembly= findobj(fH,'Tag','ss_Assembly') ;
 GetHyperB= ss_Assembly.UserData.HyperBundle ;
 skipBase= GetHyperB.skipBase ;
-
+insertBase= GetHyperB.insertBase ;
+GetHyperB.ObjFigure = fH ;
 
 axes(ax);
 hold on; axis  equal;
@@ -58,6 +60,8 @@ switch answer2
             plotH{k}.HitTest='off' ;
         end
         h_bingraph=[];
+   
+        
     case 'By Staple graph'
         UseStapleGraph=1 ;
         [ h_bingraph,Graph,ST_list ]= GetHyperB.FindStapGraph ;
@@ -140,6 +144,18 @@ for scaf_j = 1 : length( GetHyperB.scafC5)
     % CellMat = interpolateBase( CellMat ) ;   % test
     
     ScafForScatter= setdiff(BaseRoute , skipBase,'rows' ,'stable') ;  %C5 notation
+    %-------introduce insert
+    ScafForScatterExtraCol = [ScafForScatter , [1: size(ScafForScatter,1)]']; 
+    [~,bb] = ismember(insertBase,ScafForScatter ,'rows'   ) ;
+    
+    insertBaseExtraCol = [insertBase , bb+0.5]; 
+    Merge= [ScafForScatterExtraCol; insertBaseExtraCol] ;
+    sortMerge = sortrows(Merge,3) ;
+    ScafForScatter=sortMerge(:,1:2) ;
+    
+%     insertBase;
+%     sdfsf=3
+    %--------
     if scaf_j==1
         ScafForScatterAll=   ScafForScatter ;
     else
@@ -328,9 +344,9 @@ sH3D=scatter3(BaseScafR3DXYZ(:,1) ,BaseScafR3DXYZ(:,2) ,BaseScafR3DXYZ(:,3),54,'
 sH3D.MarkerFaceColor='none' ;
 
 
-Isstap=0 ;  TM=1 ;
-% [pScaf2,ScafHelix,pScaf_center,ScafBaseCenterHelix ,NVecscaf,scafBundleRout ]=plotScaf2_Helix_V2( GetHyperB,{GetHyperB.scafC5},Isstap ,[0,0,1] ,TM ) ;     % plot scaf strands
 
+% [pScaf2,ScafHelix,pScaf_center,ScafBaseCenterHelix ,NVecscaf,scafBundleRout ]=plotScaf2_Helix_V2( GetHyperB,{GetHyperB.scafC5},Isstap ,[0,0,1] ,TM ) ;     % plot scaf strands
+Isstap=0 ;  TM=1 ;
 [ScafHelixXYZ,ScafBasesCenter  ]=plotScaf2_Helix_V2_noGraphics( GetHyperB,GetHyperB.scafC5,Isstap ,[0,0,1] ,TM ) ;     % get scaf strands coordinate
 % return
 for k = 1 : length(surfH3D)
@@ -376,6 +392,15 @@ end
 % sH3D.MarkerFaceColor='none' ;
 
 for k=1:length(pStapleH)   % 3D staple
+    
+    %hard code for MEO
+    if length( pStapleH{k}.XData)==26 
+        plotH{k}.Color= [ 0 0 1 ]  ;
+    elseif length( pStapleH{k}.XData)==36
+        plotH{k}.Color= [ 1 1 0 ] ;
+    end
+    
+    
     pStapleH{k}.Color =   plotH{k}.Color ;
     delete(pStap_center{k}) ;
 end
@@ -540,8 +565,36 @@ for k= 1:length( GetHyperB.StapList3)
     CornerRout = GetHyperB.StapList3{k} ;
     BaseR_notyet =interpolateBase(  CornerRout )  ;
     StapBaseR= setdiff(BaseR_notyet , skipBase,'rows' ,'stable') ;  %C5 notation
+    %-----------Introduce insert
+    StapBaseRExtra = [StapBaseR , [1: size(StapBaseR,1)]']; 
+    insertBaseP = intersect(insertBase,StapBaseR,'rows' ) ;
+    [~,bb2] = ismember(insertBaseP,StapBaseR ,'rows'   ) ;
     
-    [tf,indbase ] = ismember(StapBaseR ,ScafForScatterAll, 'rows' ) ;  %C5
+    insertBaseExtra = [insertBaseP , bb2+0.5]; 
+    Merge= [StapBaseRExtra; insertBaseExtra] ;
+    sortMerge = sortrows(Merge,3) ;
+    StapBaseR2=sortMerge(:,1:2) ;
+    StapBaseR=StapBaseR2;           
+   
+     %   ---
+%     [tf,indbase ] = ismember(StapBaseR2 ,ScafForScatterAll, 'rows' ) ;  %C5
+    [tf,indbase ] = ismembertol(StapBaseR2 ,ScafForScatterAll, 'ByRows',true ,'OutputAllIndices',true) ;  %C5
+    for sk = 1:length(indbase)-1
+        if length(indbase{sk})==1 &&  length(indbase{sk+1})>1
+           if indbase{sk}>indbase{sk+1}(1)
+            indbase{sk+1} = sort( indbase{sk+1},'descend') ;
+           else
+            indbase{sk+1} = sort( indbase{sk+1},'ascend') ;   
+           end
+        end   
+    end
+    
+    [C,ia,ic] = unique(StapBaseR2,'stable','rows') ;
+    indbase= cell2mat(indbase(ia) ) ;
+    %------
+    
+%     indbase(ia)
+    
     ScafUnUsed=setdiff(ScafUnUsed,indbase) ;
     if sum( tf==0)>0
         fprintf(' has single stranded staple bases, sequence unknown, strand %i  ' ,k)
@@ -591,7 +644,7 @@ for k= 1:length( GetHyperB.StapList3)
     
     StapSeq{k,1} = strcat(num2str(StartP(1)),'[', num2str(StartP(2)),']'  )  ;
     StapSeq{k,2} = strcat(num2str(EndP(1)),'[', num2str(EndP(2)),']'  )  ;
-    StapSeq{k,4} = num2str(size(StapBaseR,1)) ;
+    StapSeq{k,4} = num2str(length(QQ)) ;
     
     %     rgbZero2One =  rand(1,3) ;   % staple color code
     rgbZero2One =  pStapleH{k}.Color ;   % staple color code
@@ -647,7 +700,7 @@ LL= cellfun(@length,StapAllBaaeCell) ;
 % %---------------
 
 
-btn4.Callback= @(src,evn)overhangSeq(src,evn,StapSeq,CornerNotation,GetHyperB,ScafForScatterAll,Scaf2H) ;
+btn4.Callback= @(src,evn)overhangSeq(src,evn,StapSeq,CornerNotation,GetHyperB,ScafForScatterAll,Scaf2H,pScaf2H) ;
 % btn3.Cal
 t_json.Data =StapSeq;
 t_json.UserData.BeforeOHSeq =StapSeq ;
@@ -674,12 +727,12 @@ if isempty(IndTooLong)
     fprintf('All staple shorter than 60. \n')
 end
 
-IndTooShort =find(LL<20 ) ;
+IndTooShort =find(LL<30 ) ;
 for k=1:length(IndTooShort)
-    fprintf('Staple %i shorter than 20\n',IndTooShort(k)) ;
+    fprintf('Staple %i shorter than 30 (%i).\n',IndTooShort(k) ,LL(IndTooShort(k))) ;
 end
 if isempty(IndTooShort)
-    fprintf('All staple longer than 20. \n')
+    fprintf('All staple longer than 30 . \n')
 end
 % uistack(sH,'top');
 % uistack(sH3D,'top');
@@ -713,14 +766,14 @@ if UseStapleGraph ==1
     h_bingraph.ButtonDownFcn=@(src,evn)StapGraphButtonDown(src,evn,t_json,  pStapleH,  plotH ,jsonSlider2) ;
 end
 % profile viewer
-opts.Interpreter = 'tex';
-opts.Default = 'No';
-answer = questdlg('\fontsize{15} Inspect Scaffold and Staple routing mapping ?'  , ...
-    'Inspect or not?', ...
-    'Yes','No',opts);
-if strcmp(answer ,'Yes')
-    GetHyperB.InspectRouting(t_json,  pStapleH,  plotH ,jsonSlider2);
-end
+% opts.Interpreter = 'tex';
+% opts.Default = 'No';
+% answer = questdlg('\fontsize{15} Inspect Scaffold and Staple routing mapping ?'  , ...
+%     'Inspect or not?', ...
+%     'Yes','No',opts);
+% if strcmp(answer ,'Yes')
+%     GetHyperB.InspectRouting(t_json,  pStapleH,  plotH ,jsonSlider2);
+% end
 
 fprintf('End of preview  \n') ;
 
@@ -743,7 +796,7 @@ end
 end
 
 
-function overhangSeq(src,evn,StapSeq,CornerNotation,GetHyperB,ScafForScatter,Scaf2H)
+function overhangSeq(src,evn,StapSeq,CornerNotation,GetHyperB,ScafForScatter,Scaf2H,pScaf2H)
 t_json=findobj(gcf,'Tag','t_json') ;
 t_OH=findobj(gcf,'Tag','OHTable');  CompareCol=[2,5,6,7,8] ; IsSame=true;
 FirstRow = {t_OH.Data{1,2}, t_OH.Data{1,5},  t_OH.Data{1,6}, t_OH.Data{1,7}, t_OH.Data{1,8}} ;
@@ -841,10 +894,11 @@ if strcmp(answerClosingSeq,'OverWrite')
                 %              SeqsOfClosing{k}=RandSeq;
             end
             
-        case 'Custom assign'
+        case 'Custom assign' 
             SeqsOfClosing = cell(length(CornerNotation),1) ;   % need to be created for all cases
             opts.Interpreter = 'tex'; opts.Resize='on';
             
+            GetHyperB.ClosingStrand.ssT_shift = zeros( length(CornerNotation),1 ) ;
             for k =1: length(CornerNotation)
                 Corn=  CornerNotation{k};
                 if ~isempty(Corn)
@@ -861,16 +915,62 @@ if strcmp(answerClosingSeq,'OverWrite')
                 else
                     BaseByBase=[];
                 end
-                Scaf2H{k}.Color=[1,0,0];
-                Scaf2H{k}.LineWidth =2 ;
-                str=strcat('\fontsize{12}#OH= ', num2str(k) ,'/',num2str(length(CornerNotation))  ,', Enter Seq,  N=', num2str(size(BaseByBase,1)),', highlighted as red, incorrect input will be randomly assigned')   ;
-                answer = inputdlg(str, 'Sequence', [1 80] , {randseq(size(BaseByBase,1))} ,opts) ;
-                
+                Scaf2H{k}.Color=[1,0,0]; pScaf2H{k}.Color=[1,0,0];
+                Scaf2H{k}.LineWidth =2 ; pScaf2H{k}.LineWidth =2 ;
+                str=strcat('\fontsize{12}#OH= ', num2str(k) ,'/',num2str(length(CornerNotation))  ,', Enter Seq,  N=', num2str(size(BaseByBase,1)),...
+                    ', highlighted as red, incorrect input will be randomly assigned. Key in ''self-comp or 0-4 (length of ssT )'' for staple-staple overhang complementary.')   ;
+                answer = inputdlg(str, 'Sequence', [2 100] , {randseq(size(BaseByBase,1))} ,opts) ;
+                ssT_lengths={'0', '1' , '2', '3','4'} ; 
                 if ~isempty(answer)
+                    if strcmp( answer{1}, 'self-comp' ) || ismember(answer{1}, ssT_lengths )
+                        if strcmp( answer{1}, 'self-comp' )
+                            ssTL = 0 ;
+                        else
+                            ssTL = str2num(answer{1}) ;
+                        end
+                        hL = size(BaseByBase,1)/2;
+                        RootCS = GetHyperB.ClosingStrand.RootAndExtC5(:, [1 3]) ;
+                        IsHeadAsRoot = ismember(Corn(1,:) , RootCS  ,'rows' ) ;
+                        IsTailAsRoot = ismember(Corn(end,:) , RootCS  ,'rows' )  ;
+                        
+                        if xor(IsHeadAsRoot , IsTailAsRoot)  % assume as double overhang case1
+                            fprintf('Assigning staple overhangs in this pair complementary to each other (Double overhang1).\n')
+                            halfSeq = randseq(size(BaseByBase,1)/2) ;
+                            answer{1}  = [halfSeq , seqrcomplement(halfSeq)] ;
+                            GetHyperB.ClosingStrand.ssT_shift(k) = ssTL ;
+                            
+                            answer{1}(1:ssTL)='A' ;  % force these staple bases to T (CS='A') ;
+                            answer{1}(end-ssTL+1:end)='A' ;
+                            if ~IsHeadAsRoot
+                                answer{1}(1:hL)= circshift( answer{1}(1:hL) , -ssTL) ;
+                            else
+                                answer{1}(hL+1:end)= circshift( answer{1}(hL+1:end) , ssTL) ;
+                            end
+                        else   % assume as double overhang case2 
+                            fprintf('Assigning staple overhangs in this pair complementary to each other (Double overhang2).\n')
+%                             sdfsf=2 ;
+                            halfSeq = randseq(size(BaseByBase,1)/2) ;
+                            answer{1}  = [halfSeq , seqrcomplement(halfSeq)] ;
+                            GetHyperB.ClosingStrand.ssT_shift(k) = ssTL ;
+                            if IsHeadAsRoot %Insert 'T' in both ends which are roots 
+                            answer{1}(1:ssTL)='A' ;  % force these staple bases to T (CS='A') ;
+                            answer{1}(end-ssTL+1:end)='A' ;
+                            else  %Insert 'T' in the middle,  which are roots 
+                            answer{1}(hL-ssTL+1:hL)='A' ;  % force these staple bases to T (CS='A') ;
+                            answer{1}(hL+1:hL+ssTL)='A' ;
+                            end
+
+                            
+                        end
+                        
+                    end
+                    
+                    
                     tf1 =length(answer{1})==size(BaseByBase,1) ;
                     indA=answer{1}=='A' ;  indT=answer{1}=='T' ;  indC=answer{1}=='C' ; indG=answer{1}=='G' ;
                     isATCG=or(or(or(indA, indT) ,indC ), indG) ;
                     tf2=  sum(isATCG==1)==length(isATCG) ;
+                    
                     if ~tf1 || ~tf2
                         answer{1}  = randseq(size(BaseByBase,1)) ;
                     end
@@ -878,8 +978,8 @@ if strcmp(answerClosingSeq,'OverWrite')
                     answer{1}  = randseq(size(BaseByBase,1)) ;
                 end
                 SeqsOfClosing{k} = answer{1}   ;
-                Scaf2H{k}.Color=[0,0,0];
-                Scaf2H{k}.LineWidth=1 ;
+                Scaf2H{k}.Color=[0,0,0]; pScaf2H{k}.Color=[0,0,0];
+                Scaf2H{k}.LineWidth=1 ; pScaf2H{k}.LineWidth=1 ;
             end
     end
     
@@ -1015,9 +1115,13 @@ num_lines = 1;  defaultans = {'CSVfilename'};
 answer = inputdlg(prompt,dlg_title,num_lines,defaultans);
 
 fileID = fopen([pwd filesep answer{1} '.csv' ],'w');
-fprintf(fileID , 'Start,End,Seq,Length,Color,Note \n'  )    ;
+fprintf(fileID , 'Staple#,Start,End,Seq,Length,Color,Note \n'  )    ;
 for k=1:size(t_json.Data,1)
-    fprintf(fileID , '%s,%s,%s,%s,#%s,%s \n'  ,t_json.Data{k,1},t_json.Data{k,2},t_json.Data{k,3},t_json.Data{k,4},t_json.Data{k,5},t_json.Data{k,6})    ;
+    if contains(t_json.Data{k,3} , '?')
+    fprintf(fileID , '%i,%s,%s,%s,%s,#%s,%s \n' ,k ,t_json.Data{k,1},t_json.Data{k,2},t_json.Data{k,3},t_json.Data{k,4},t_json.Data{k,5}, 'This strand contains unknow Seqs.'  )    ;
+    else
+    fprintf(fileID , '%i,%s,%s,%s,%s,#%s,%s \n' ,k ,t_json.Data{k,1},t_json.Data{k,2},t_json.Data{k,3},t_json.Data{k,4},t_json.Data{k,5},t_json.Data{k,6})    ;
+    end
 end
 fclose(fileID);
 

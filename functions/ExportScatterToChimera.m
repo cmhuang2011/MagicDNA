@@ -24,25 +24,30 @@ for  k = 1:length(h_plot)
 %      fprintf(fileID , '.marker  %4.2f %4.2f %4.2f\n',XYZ(1,:)')    ;
     
     if strcmp(get(h_plot(k), 'Type') ,'scatter')
-        fprintf(fileID ,'.color %4.2f %4.2f %4.2f\n',  h_plot(k).CData );
+%         fprintf(fileID ,'.color %4.2f %4.2f %4.2f\n',  h_plot(k).CData );
         %          fprintf(fileID ,'.color %4.2f %4.2f %4.2f\n', [0.2,0.8,0.3]);
         
         switch h_plot(k).SizeData
-            case 86
+            case 96
                 Radius = 0.3 ;
             case 36
-                Radius = 0.3 ;
+                Radius = 0.1 ;
+            case 58
+                Radius = 0.5 ;
+                
             case 6
                 Radius = 0.1 ;
+                
             otherwise
-                Radius = 0.2 ;
+                Radius = 0.05 ;
         end
     else
         Radius =0.1;
-         fprintf(fileID ,'.color %4.2f %4.2f %4.2f\n',  rand(1,3) );
+%          fprintf(fileID ,'.color %4.2f %4.2f %4.2f\n',  rand(1,3) );
     end
+    Radius=Radius*3 ;
     
-    
+    Radius=0.2;
     for Bi = 1:size(XYZ ,1)-1   %
 %         fprintf(fileID , '.cylinder %4.2f %4.2f %4.2f %4.2f %4.2f %4.2f %4.2f open\n',XYZ(Bi,:)',XYZ(Bi+1,:)',Radius )    ;
         

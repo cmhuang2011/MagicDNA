@@ -5,14 +5,16 @@ function varargout=plotScaf2_Helix_V2_noGraphics( GetHyperB,CornerNotation,Issta
 %   V2: removed old helix function. Assume all use overhang's function to
 %   get helix
 
-SacfR=GetHyperB.ScafRouting{1} ;
-for k = 2 : length(GetHyperB.ScafRouting)
- SacfR= [SacfR ; GetHyperB.ScafRouting{k}    ] ;
-end
-MaxBase=max(SacfR(:,3));
-
-skipPattern1=9:60:MaxBase;   % skip mod2 =0   %test 4/20
-skipPattern2=39:60:MaxBase;
+% SacfR=GetHyperB.ScafRouting{1} ;
+% for k = 2 : length(GetHyperB.ScafRouting)
+%  SacfR= [SacfR ; GetHyperB.ScafRouting{k}    ] ;
+% end
+% MaxBase=max(SacfR(:,3));
+% 
+% skipPattern1=9:60:MaxBase;   % skip mod2 =0   %test 4/20
+% skipPattern2=39:60:MaxBase;
+     AllSkipBase =GetHyperB.skipBase ;
+     AllinsertBase =GetHyperB.insertBase ;
 
 
 Coeff= 0.85*0.4 ;
@@ -38,7 +40,6 @@ for stai=1:length(CornerNotation)   %actually mean scaffold, in case multi scaff
     BaseCenterHelix =zeros(10000,3);    % oxdna center location
     NVec =zeros(10000,3);    % oxdna center location
     BundleRout = zeros(10000,2);    % BelongM
-     AllSkipBase =GetHyperB.skipBase ;
     for edgeinSCR=1:2:size(StapAll,1)
          C5Cyl=StapAll(edgeinSCR,1);
          bundle=GetHyperB.RelateTable(GetHyperB.RelateTable(:,5)==C5Cyl,1)   ;%multi-section needs be cautious
@@ -69,27 +70,39 @@ for stai=1:length(CornerNotation)   %actually mean scaffold, in case multi scaff
                InplaneXY=Bundle.findExtraCylInplanePosition(  GetHyperB.RelateTable, ColRow,fRefCyl)   ;%
                BaseStart=StapAll(edgeinSCR,2);   BaseEnd=StapAll(edgeinSCR+1,2);
 
-                  if  strcmp(Bundle.Lattice, 'Square') && Cyl~=-1   % not on overhang
-                     if xor(BaseStart<BaseEnd,Isstap~=1)  %go to left------------------stap, important, for scaffold it is opposite 
-%                         skipP=skipPattern2;
-                        skipP=AllSkipBase(AllSkipBase(:,1)==C5Cyl,2) ; 
-                     else
-%                         skipP=skipPattern1;
-                          skipP=AllSkipBase(AllSkipBase(:,1)==C5Cyl,2) ;
-                     end
-                 else
-                     skipP=[];        %only square lattice needs skip
-                                        
-                 end     
+%                   if  strcmp(Bundle.Lattice, 'Square') && Cyl~=-1   % not on overhang
+% %                      if xor(BaseStart<BaseEnd,Isstap~=1)  %go to left------------------stap, important, for scaffold it is opposite 
+% % %                         skipP=skipPattern2;
+% %                         skipP=AllSkipBase(AllSkipBase(:,1)==C5Cyl,2) ; 
+% %                      else
+% % %                         skipP=skipPattern1;
+% %                           skipP=AllSkipBase(AllSkipBase(:,1)==C5Cyl,2) ;
+% %                      end
+%                       skipP=AllSkipBase(AllSkipBase(:,1)==C5Cyl,2) ;
+%                  else
+%                      skipP=[];        %only square lattice needs skip
+%                                         
+%                   end  
+                 skipP=AllSkipBase(AllSkipBase(:,1)==C5Cyl,2) ;
+                 
                       if BaseStart<BaseEnd
                          Vertical_NVec = [0 ,0 ,1] ;
                      else 
                          Vertical_NVec = [0 ,0 ,-1] ; 
                      end  
-                 
-                  
                   
                BasesArr =  setdiff(linspace(BaseStart,BaseEnd , abs(BaseStart-BaseEnd) +1  ) , skipP,'stable') ;
+               %-----Introduce insert
+               insertP=AllinsertBase(AllinsertBase(:,1)==C5Cyl,2) ;insertP=reshape(insertP, 1,[]);
+               if ~isempty(intersect(insertP ,BasesArr ))
+                   if BasesArr(1)>BasesArr(end)
+                       BasesArr=sort([BasesArr,intersect(insertP ,BasesArr )] ,'descend')  ;
+                   else
+                       BasesArr=sort([BasesArr,intersect(insertP ,BasesArr )] ,'ascend')    ;
+                   end
+               end
+               %----------
+               
                Global_XYZ=Bundle.HelixRegardlessCylinder(1.06,Isstap,InplaneXY,BasesArr,ThefSimilarDirCylder) ;   %  already assign as scaffold domain (rr,isstap,......)
                % get 3d coordinate section by section
                PartHelix2= Global_XYZ(:,1:3) ;                   

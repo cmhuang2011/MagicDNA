@@ -30,8 +30,8 @@ XYZ(end,:)=[];
     end
 outputHandle=scatter3(XYZ(:,1),XYZ(:,2),XYZ(:,3)) ;
 
-outputHandle.CData= pHcell{1}.CData ;
-outputHandle.Marker = pHcell{1}.Marker ;
+% outputHandle.CData= pHcell{1}.CData ;
+% outputHandle.Marker = pHcell{1}.Marker ;
     if isfield(pHcell{1}.UserData,'Seq')
     outputHandle.UserData.Seq= seqallocate;
     end

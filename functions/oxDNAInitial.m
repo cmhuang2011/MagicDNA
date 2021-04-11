@@ -31,10 +31,19 @@ axes(ax);cltab; hold on ;axis equal;
 % pScaf2=plotScaf2_Helix_V2( GetHyperB,{GetHyperB.scafC5}  ) ;     % plot scaf strand
 Isstap = 0; TM=2 ;
 [pScaf2,ScafHelix,pScaf_center,ScafBaseCenterHelix ,NVecscaf,scafBundleRout ]=plotScaf2_Helix_V2( GetHyperB,GetHyperB.scafC5,Isstap ,[0,0,1] ,TM ) ;     % plot scaf strands
+for k=1:length(pScaf2) % MagicDNA2 , insert adjust
+ AdjustInsert( pScaf2{k} , pScaf_center{k} ) ;
+end
 
 
 % return
 [pStap,StapHelix,pStap_center,StapBaseCenterHelix, NVecstap,stapBundleRout ]=plotScaf2_Helix_V2( GetHyperB,GetHyperB.StapList3,1 ,[1,0,0],TM ) ;     % plot staple strand
+for k=1:length(pStap)  % MagicDNA2 , insert adjust
+ AdjustInsert( pStap{k} , pStap_center{k} ) ;
+end
+
+
+% sdfs=3
 
 scaf.pScaf2=pScaf2 ; scaf.ScafHelix=ScafHelix; scaf.pScaf_center=pScaf_center ; scaf.ScafBaseCenterHelix=ScafBaseCenterHelix; scaf.NVecscaf=NVecscaf ;
 stap.pStap=pStap ; stap.StapHelix=StapHelix; stap.pStap_center=pStap_center ; stap.StapBaseCenterHelix=StapBaseCenterHelix; stap.NVecstap=NVecstap ;
@@ -49,11 +58,18 @@ CS.pCS=pCS ; CS.CShelix=CShelix ; CS.pCS_center=pCS_center ; CS.CSBaseCenterHeli
 % GetHyperB.ClosingCornerNotation
 CSLengths= zeros(size(GetHyperB.ClosingCornerNotation,1) ,2)  ;
 for k=1:size(CSLengths,1)
+    if isempty( GetHyperB.ClosingCornerNotation{k})
+        continue
+    end
+    
     CSLengths(k,1) =  size(interpolateBase(  GetHyperB.ClosingCornerNotation{k}(1:2,:) )  ,1 ) ;
     CSLengths(k,2) =  size(interpolateBase(  GetHyperB.ClosingCornerNotation{k}(3:4,:) )  ,1 );
 end
 CS.CSLengths=CSLengths ;
 
+
+
+% sdf=3
 
 oxDNASlider.Callback=@(src,evn)silderexplode(src,evn, GetHyperB ,scaf, stap ,GetHyperB.scafC5,GetHyperB.StapList3,CS,GetHyperB.ClosingCornerNotation ) ;
 
@@ -104,7 +120,6 @@ switch answer_CG
         file2_name=strcat(answer{1},'_ribbon_' , '.bild')      ;
 end
 
-sdfsf=3;
 
 %      c = uisetcolor
 tic
@@ -285,7 +300,8 @@ for k=1:length(SpiltBunde)
     BM3(IndMove2) =max(BM) +cc ; cc=cc+1;
     
 end
-%     sdfsf=3
+
+
 fileTransInd_name=strcat( 'BM3.mat') ;
 save(fileTransInd_name, 'BM3') ;
 %------------------------
@@ -426,7 +442,6 @@ else
     NVec = zeros(sum(scafL)+sum(StpL)+sum(ClosingStrandL) , 3);
 end
 
-% sdsfsf=3
 cc=1;
 for scaf_j = 1 :length(scafL)
     CentersVec(cc:cc+scafL(scaf_j)-1  ,:) = [scaf.pScaf_center{scaf_j}.XData ;  scaf.pScaf_center{scaf_j}.YData; scaf.pScaf_center{scaf_j}.ZData]'  ;  % slider can change the exported configuration
@@ -482,7 +497,71 @@ Dbox = bounds(2,:) -  bounds(1,:) ;
 KK=1.5;
 boxsize =max( KK*50*ceil(Dbox/50) ) ;  cc= 0.5*[boxsize,boxsize,boxsize] ;
 CentersVec = CentersVec  -boxCenter +cc ;
+% % % %------initial twist configuration 
+% ExcInd = [1:981, 7462:7560,  size(CentersVec,1)-1079:size(CentersVec,1)];
+% IndAccount=ones(size(CentersVec,1),1)==1 ;
+% IndAccount(ExcInd) =false ;
+% % 
+% CentersVec_ori =CentersVec ;
+% ConfToTwist = CentersVec(IndAccount ,:) ;
+% BVecToTwist = BVec(IndAccount ,:) ;
+% NVecToTwist = NVec(IndAccount ,:) ;
+% % 
+% N=100 ;
+% TotalTwistAngle = -1080  % degree, right-handed as positive
+% 
+% TotalTwistAngle=-TotalTwistAngle ;
+% XSlice=  linspace( min(ConfToTwist(:,1)),max(ConfToTwist(:,1))+0.1, N) ;
+% AngArr = linspace(-TotalTwistAngle/2,TotalTwistAngle/2,N-1) ;
+% % 
+% % [XY , XYcyl]= mappingBend(max(XSlice)-min(XSlice) , 2*(max(ConfToTwist(:,2))-min(ConfToTwist(:,2))) , 2*N-2 , 9 ,120) ;
+% % % AngArr=AngArr+min(AngArr);
+% % % figure; hold on;
+% % for k = 1 : length(XSlice)-1
+% % Inds  =   and(ConfToTwist(:,1)>=XSlice(k) ,ConfToTwist(:,1)<=XSlice(k+1)  ) ;
+% % RotationAngle = AngArr(k) ;
+% % % RotationAngle = 30;
+% % % RMat = RotationAxisToRotaionMatrix( [1 0 0],RotationAngle )     ;
+% % % RMat = RotationAxisToRotaionMatrix( [0 1 0],RotationAngle )   ;  
+% % % RMat=inv(RMat);
+% % 
+% % RefXY = XY(18*k-17:18*k ,:) ; GcRefXY = mean(RefXY) ;  RefXY = RefXY -GcRefXY  ;   RefXY(:,3)=0 ;
+% % RefXYcyl = XYcyl(18*k-17:18*k , :) ;  RefXYcyl = RefXYcyl -GcRefXY  ;  RefXYcyl(:,3)=0 ;
+% % Gcenter = mean(ConfToTwist(Inds,:)) ;
+% %  ConfToTwist(Inds,:) = ConfToTwist(Inds,:) -Gcenter ;
+% %  
+% % %    A3byNaLL=  transpose(TrajOri(:,1:3,frI )) ;  % which will be transformed.
+% %    [regParams,~,~]=absor(RefXY',RefXYcyl');
+% % %   A_prime = transpose(regParams.R*A3byNaLL + regParams.t  ); % Base centers
+% % 
+% % ConfToTwist(Inds,:) = transpose(regParams.R*ConfToTwist(Inds,:)' + regParams.t  ); % Base centers
+% % 
+% % 
+% % %     ConfToTwist(Inds,:) =   (ConfToTwist(Inds,:))*RMat  ;
+% % %         ConfToTwist(Inds,:) =   (ConfToTwist(Inds,:)- Gcenter)*RMat + Gcenter ;
+% % % scatter3( ConfToTwist(Inds,1),ConfToTwist(Inds,2),ConfToTwist(Inds,3));
+% % 
+% % %   ConfToTwist(Inds,2)=  ConfToTwist(Inds,2)+100 ;
+% %     BVecToTwist(Inds,:) =  transpose(regParams.R*BVecToTwist(Inds,:)'  ); 
+% %     NVecToTwist(Inds,:) =  transpose(regParams.R*NVecToTwist(Inds,:)'   ); 
+% %     
+% % end
+% for k = 1 : length(XSlice)-1
+% Inds  =   and(ConfToTwist(:,1)>=XSlice(k) ,ConfToTwist(:,1)<XSlice(k+1)  ) ;
+% RotationAngle = AngArr(k) ;
+% RMat = RotationAxisToRotaionMatrix( [1 0 0],RotationAngle )     ;
+% Gcenter = mean(ConfToTwist(Inds,:)) ;
+%     ConfToTwist(Inds,:) =   (ConfToTwist(Inds,:)- Gcenter)*RMat + Gcenter ;
+%     BVecToTwist(Inds,:) =   BVecToTwist(Inds,:)*RMat  ;
+%     NVecToTwist(Inds,:) =   NVecToTwist(Inds,:)*RMat  ;
+% end
+% CentersVec(IndAccount ,:)  = ConfToTwist ;
+% BVec(IndAccount ,:)=BVecToTwist ;
+% NVec(IndAccount ,:)=NVecToTwist ;
+% % % %-----------hard code
 
+% CentersVec(:,1)=CentersVec(:,1)/7*5 ;
+%------
 file2_name='prova3322.conf';
 fileID = fopen(file2_name,'w');
 fprintf(fileID,'t = 0\n'); E0=0;
@@ -519,13 +598,19 @@ fprintf('finished printing oxdna formats\n'  )
 % %  figure(77882);clf;plot( results(:,1) ,results(:,2))
 % %  Result show :[0.6,tol=0.001]
 % %
-Coeff=0.57 ;  %0.6
-CentersVec2=CentersVec+Coeff*BVec ;   % used for mrDNA base position
+% Coeff=0.57 ;  %0.6
+% CentersVec2=CentersVec+Coeff*BVec ;   % used for mrDNA base position
 %    figure;scatter3(CentersVec2(:,1) , CentersVec2(:,2),CentersVec2(:,3),'.')
 
 DontUseConf = [ cell2mat( GetHyperB.ScafAllBase); cell2mat( GetHyperB.StapAllBase)] ;
-[C,IA,IC] = uniquetol(DontUseConf,0.002,'ByRows',true,'OutputAllIndices',true );
+% [~,IA,~] = uniquetol(DontUseConf,0.002,'ByRows',true,'OutputAllIndices',true );
 
+[~,IA22,IC22] = unique(DontUseConf,'rows' );
+IA = cell(size(IA22)) ;
+for k =1: length(IA)
+  IA{k} =    find(IA22(k) == IC22) ;
+end
+    
 %  [C,IA,IC] = uniquetol(CentersVec2,0.002,'ByRows',true,'OutputAllIndices',true );
 LL_IA= cellfun('length',IA) ;
 ScafStapCorrelate2 =zeros(sum(LL_IA ==1) ,2 ); cj=1;
@@ -539,7 +624,7 @@ for j=1:length(LL_IA)
         %          [
         SeqPair=saveallseq((IA{j})');
         if strcmp(SeqPair,'AT')||strcmp(SeqPair,'TA')||strcmp(SeqPair,'CG')||strcmp(SeqPair,'GC')
-            sdf=3;
+%             sdf=3;
         else
             Iamwroong=Iamwroong+1 ;
             ScafStapCorrelate2(cj-1,:) =[0,0 ] ;
@@ -560,23 +645,40 @@ for iF=1:size(ScafStapCorrelate2,1)
     fprintf(fileID5,'type = mutual_trap\n' );
     fprintf(fileID5,'particle = %u\n' ,ScafStapCorrelate2(iF,1));
     fprintf(fileID5,'ref_particle  = %u\n' ,ScafStapCorrelate2(iF,2));
-    fprintf(fileID5,'stiff = %u \n' ,10 );
+    fprintf(fileID5,'stiff = %u \n' ,0.2 );
     fprintf(fileID5,'r0 = 1.2 \n'  );
+    fprintf(fileID5,'PBC = 1 \n'  ); % peirodic boundary condition, suggested from the forum
     fprintf(fileID5,'}\n' );
     fprintf(fileID5,'{\n' );
     fprintf(fileID5,'type = mutual_trap\n' );
     fprintf(fileID5,'particle = %u\n' ,ScafStapCorrelate2(iF,2));
     fprintf(fileID5,'ref_particle  = %u\n' ,ScafStapCorrelate2(iF,1));
-    fprintf(fileID5,'stiff = %u \n' ,10 );
+    fprintf(fileID5,'stiff = %u \n' ,0.2 );
     fprintf(fileID5,'r0 = 1.2 \n' );
+    fprintf(fileID5,'PBC = 1 \n'  );
     fprintf(fileID5,'}\n' );
 end
 
 fclose(fileID5);
 
+GetHyperB.MonomerDsRemain  = ScafStapCorrelate2 ; % already substract 1 for oxDNA indexing
+
+% % 
+% % % % %----------MOE hard code
+% Inds = CentersVec(:,2)<290.5  ;
+% Indsub1 = and(CentersVec(:,1)<250 , Inds) ;
+% Indsub2 = and(CentersVec(:,1)>380 , Inds) ;
+% Indsub3 = and( and(CentersVec(:,1)<=380,CentersVec(:,1)>=250) , Inds) ;
+% BM3(Indsub1) =2 ; BM3(Indsub2) =3 ;BM3(Indsub3) =4 ;
+% fileTransInd_name=strcat( 'BM3.mat') ;
+% save(fileTransInd_name, 'BM3') ;
+% % %------------------
+
+
 
 FineTuneOXDNA_Conf_wBM     ;
 
+return
 %---------------mrDNA Chrstopher Muffeo, UIUC
 % header: x,y,z,bpindex ,stackindex, ntOn3'
 %------------scaf

@@ -28,7 +28,11 @@ axes(ax);
 %             [Traj_filename,PathName2,FilterIndex]= uigetfile({'*.dat;*.conf','Trajectory file' },'Select the Trajectory file');
 %             obj.Traj_filename=Traj_filename;
 
-oxDNA_ex = oxDNATrajObject;   % control which class to use .
+% SimulationFolder = uigetdir() ;
+% oxDNA_ex = oxDNATrajObject({SimulationFolder});   % Only assign a folder with data, see code to change initial conf and traj file names .
+
+oxDNA_ex = oxDNATrajObject({1,2,3});   % ask three inputs: topology, ini.Conf, traj .
+
 % oxDNA_ex = oxDNATrajObject_polymer;   % control which class to use .
 % oxDNA_ex = oxDNATrajObject_polymer_CM;   % control which class to use , Chao-Min use.
 
@@ -73,12 +77,17 @@ NoDriftTraj=TrajOri ;
 % MeanConf=oxDNA_ex.MeanConf ;
 % MeanConf = oxDNA_ex.Traj(:,1:3,101) ; % temp
 % figure; hold on; scatter3(MeanConf(:,1),MeanConf(:,2),MeanConf(:,3),'.')
+% 1080
+ExcInd = [1:981, 7462:7560,  size(oxDNA_ex.Strand,1)-1079:size(oxDNA_ex.Strand,1)];
+IndAccount=ones(size(oxDNA_ex.Strand,1),1)==1 ;
+IndAccount(ExcInd) =false ;
 
 B3byNaLL=  transpose(TrajOri(:,1:3,1 ) );   % target
 
 for frI= 1:size(TrajOri,3)
     A3byNaLL=  transpose(TrajOri(:,1:3,frI )) ;  % which will be transformed.
     
+%     [regParams,~,~]=absor(A3byNaLL(:,IndAccount),B3byNaLL(:,IndAccount));
     [regParams,~,~]=absor(A3byNaLL,B3byNaLL);
     
     A_prime = transpose(regParams.R*A3byNaLL + regParams.t  ); % Base centers
@@ -95,7 +104,19 @@ toc
 
 oxDNA_ex.Traj=NoDriftTraj ;
 
-StackTraj =reshape(permute(NoDriftTraj(:,1:3,:)-0.4*NoDriftTraj(:,4:6,:),[1, 2,3]) ,size(NoDriftTraj,1)*3,size(NoDriftTraj,3) );
+% oxDNA 2 model
+POS_MM_BACK1 = -0.3400 ;
+POS_MM_BACK2 = 0.3408 ;
+a2 = cross(NoDriftTraj(:,7:9,:),NoDriftTraj(:,4:6,:) ) ;
+
+% Coeff=0.6 ;
+% BackBoneT = NoDriftTraj(:,1:3,:)  + Coeff*NoDriftTraj(:,4:6,:)  ; % hard code for HB center
+
+BackBoneT = NoDriftTraj(:,1:3,:)  + POS_MM_BACK1*NoDriftTraj(:,4:6,:) + POS_MM_BACK2*a2 ; % backbone
+
+
+
+StackTraj =reshape(permute(BackBoneT,[1, 2,3]) ,size(NoDriftTraj,1)*3,size(NoDriftTraj,3) );
 %-------------considering drifting
 [coeff,score,latent,~,explained,PCA_mean] = pca(StackTraj') ;
 MeanConf = reshape(PCA_mean, size(TrajOri,1) ,3);
@@ -146,9 +167,7 @@ title(str) ;
 xlabel('Base') ; ylabel('RMSF (nm)') ;
 %++++
 subplot(4 ,3 ,[ 9 12] ) ;
-% h1= histogram(RMSF_By_Base(1:ReceptorTotalBase),0:0.5:max(RMSF_By_Base) ) ; hold on ;
 h2= histogram(RMSF_By_Base(1:end),20 ) ;
-% legend([h1, h2],{'On Receptor', 'All'})
 view([90 -90]);
 xlabel('RMSF (nm)') ;  ylabel('N') ;
 % return
@@ -229,6 +248,22 @@ str={'RMSF' ; strcat( 'Avg = ', num2str(mean(RMSF_By_Base))  ) };
 ax=gca; ax.UserData.Ref_RMSF=Ref_RMSF; 
 title(str) ;
 
+%-----for shaded output
+QQ =reshape(  permute(NoDriftTraj(:,1:3,:) , [1 3 2]) , size(NoDriftTraj,1)*size(NoDriftTraj,3) , 3) ;
+% cc= 0 ; 
+% for k = 1: size(NoDriftTraj ,3)
+%     boundNode = boundary(NoDriftTraj(:,1,k) , NoDriftTraj(:,2,k) ,NoDriftTraj(:,3,k) ) ;
+%     cc=cc+ length( unique(boundNode)) ;
+% end
+% QQ = zeros(cc ,3) ;cc2=0;
+% for k = 1: size(NoDriftTraj ,3)
+%     boundNode = boundary(NoDriftTraj(:,1,k) , NoDriftTraj(:,2,k) ,NoDriftTraj(:,3,k) ) ;
+%     n = length( unique(boundNode)) ;
+%     QQ(cc2+1:cc2+n ,:) = NoDriftTraj(unique(boundNode),1:3 ,k) ;
+%     cc2=cc2+ length( unique(boundNode)) ;
+% end
+ax.UserData.AlltrajXYZ= QQ;
+%---------------
 
 
 end

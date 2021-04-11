@@ -4,7 +4,9 @@ function  AssignCustomSQ
 
 
 % [ HClattice ] = findHClattice( 1 ,[40 40]) ;
+% [X,Y] = meshgrid(0:2:80,0:2:80) ;   % For larger Xsec, 07222020
 [X,Y] = meshgrid(0:2:40,0:2:40) ;
+
 SQlattice.SQcenter= [X(:) ,Y(:) ] ;
 
 fH=figure(236); fH.Units='normalized';fH.OuterPosition=[0 0 1 1];  clf;
@@ -169,7 +171,8 @@ if strcmp(evn.Key, 'return' )
     CustumSQLattice{SelectxSec} =  Inds ;
     %-----decide selected cylinders make sense or not
 %     [ SQlattice ] = findHClattice( 1 ,[40 40]) ;
-    [X,Y] = meshgrid(0:2:40,0:2:40) ;
+%     [X,Y] = meshgrid(0:2:80,0:2:80) ;  % For larger Xsec, 07222020
+      [X,Y] = meshgrid(0:2:40,0:2:40) ;
     SQlattice.SQcenter= [X(:) ,Y(:) ] ;
 
     

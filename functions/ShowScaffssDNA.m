@@ -33,7 +33,6 @@ axCurr= gca;
 % end
 % end
 Isstap= 0 ;  TM=1 ;
-
 [ScafHelixXYZ,ScafBasesCenter  ]=plotScaf2_Helix_V2_noGraphics( GetHyperB,GetHyperB.scafC5,Isstap ,[0,0,1] ,TM ) ;     % get scaf strands coordinate
 
 GatherAll= [];
@@ -62,7 +61,7 @@ new_PatchH = copyobj(h_patch,gca);
 for patchi=1:length(new_PatchH)
     new_PatchH(patchi).FaceAlpha=0.2;
     new_PatchH(patchi).HitTest='off';
-     new_PatchH(patchi).PickableParts='none' ;
+    new_PatchH(patchi).PickableParts='none' ;
 end
 
 

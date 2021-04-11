@@ -6,6 +6,8 @@ function EditBundle(src,evn,GetHyperB,fH,patchH,popupH )
 % decision.pair=2;
 AskWhichBundle(src,evn,GetHyperB,fH,patchH ,popupH.Value(1))  ;
 ForSnapshot='on' ;  % 'on' as usual use 
+% ForSnapshot='off' ;  % 'on' as usual use 
+
 SelectBundle= src.UserData.SelectBundle ;
 TotalBundle = length(GetHyperB.containBundle ) ;
 
@@ -13,11 +15,12 @@ TotalBundle = length(GetHyperB.containBundle ) ;
 % fLocal= figure(124) ;
 % % fLocal.name='Edit Bundle dSDNA' ;
 % fLocal.Position=MainScreeSize ;  fLocal.numbertitle='off';
+
 fLocal= figure('name','Edit Bundle dSDNA','numbertitle','on' );
 fLocal.Units='normalized';fLocal.OuterPosition=[0 0 1 1];  clf;
 
-drawnow;warning('off','MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame');
-jFig = get(handle(fLocal), 'JavaFrame'); jFig.setMaximized(true); drawnow;
+% drawnow;warning('off','MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame');
+% jFig = get(handle(fLocal), 'JavaFrame'); jFig.setMaximized(true); drawnow;
 
 
 fLocal.UserData.InvShift =1 ;
@@ -1319,7 +1322,7 @@ switch evn.Key
         checkZ1 =abs(h_2DNodes.XData(2*CylinderM(1,1)-1)-h_2DNodes.XData(2*CylinderM(2,2)-1 )) ; % indexing = 2k-1
         checkZ2 =abs(h_2DNodes.XData(2*CylinderM(1,1))-h_2DNodes.XData(2*CylinderM(2,2) )) ;
         Check2 = 0 ;
-        if checkZ1>15 || checkZ2>15   % also check the cylinders ends
+        if checkZ1> 15 || checkZ2>15   % also check the cylinders ends
             Check2 = 1 ;
 %             return
         end
@@ -1345,7 +1348,7 @@ switch evn.Key
            checkZ1 =abs(h_2DNodes.XData(2*CurrentPair(k,1)-1)-h_2DNodes.XData(2*CurrentPair(k,2)-1 )) ; % indexing = 2k-1
             checkZ2 =abs(h_2DNodes.XData(2*CurrentPair(k,1))-h_2DNodes.XData(2*CurrentPair(k,2) )) ;
             
-            if round(d2)~=2  ||  checkZ1>15 || checkZ2>15  % check the new pair still neighbor
+            if round(d2)~=2  ||  checkZ1> 40 || checkZ2>40  % check the new pair still neighbor
                   Check = 0 ;
 %                   k
             end       

@@ -32,9 +32,10 @@ if isempty(varargin)
 %     substitute_stap( GetHyperB_S, GetHyperB_T, [16:18], [9:11] )
     fprintf('substitute_stap( GetHyperB_S, GetHyperB_T, [16:18], [9:11] : Bundle indexes ) \n' )
     
-    fprintf('   getGlobalstapleLength ;  : use when inspecting the staple graph for staple lengths in a group.  \n' )
-    
+    fprintf('getGlobalstapleLength ;  : use when inspecting the staple graph for staple lengths in a group.  \n' )
+    fprintf('try defining global minDist_StapleXoverFromTwoSide  for the distance of ignoring staple Xovers for ends.   \n' )
  
+   
 end
 
 if length(varargin) >= 1

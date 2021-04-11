@@ -1323,6 +1323,7 @@ for iBun=1:N_Edge
                 shiftZ1=39 + round(t.Data{iBun,9})  ;
             end
             Cyl1=[2,2] ;
+%             [X,Y] = meshgrid(0:2:80,0:2:80) ;
             [X,Y] = meshgrid(0:2:40,0:2:40) ;
             SQlattice.SQcenter= [X(:) ,Y(:) ] ; 
             load('CustumSQLattice.mat','CustumSQLattice') ;

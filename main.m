@@ -57,22 +57,31 @@ end
 
 %% -------Mechanism tab
 %% -------STEP tab
-allaxes.STEP=axes(ss_STEP,'Position',[0.05 0.25 0.6 0.7 ],'Tag','SS');title('');
+allaxes.STEP=axes(ss_STEP,'Position',[0.05 0.1 0.6 0.85 ],'Tag','SS');title('');
 allbtn.StartSTEP= uicontrol('Style','pushbutton','Parent',ss_STEP,...
-    'Units','normalized','Position',[0.15 0.1 0.2  0.05],'String','StartSTEP','Tag','SS');
+    'Units','normalized','Position',[0.1 0.1 0.15  0.05],'String','StartSTEP','Tag','SS' ,'Visible' ,'off');
 allbtn.StartSTEP.(ToolTipName)='Use a STEP file from CAD software to provide line models';
 
 allbtn.StartPoints= uicontrol('Style','pushbutton','Parent',ss_STEP,...
-    'Units','normalized','Position',[0.35 0.1 0.2  0.05],'String','StartPoints','Tag','SS');
+    'Units','normalized','Position',[0.25 0.1 0.15  0.05],'String','StartPoints','Tag','SS','Visible' ,'off');
 allbtn.StartPoints.(ToolTipName)='Provide a XYZ-point file or use Cartesian/cylindrical points to sketch lines.';
+
+allbtn.FFCurve= uicontrol('Style','pushbutton','Parent',ss_STEP,...
+    'Units','normalized','Position',[0.7 0.02 0.1 0.13],'String','FFCurve','Tag','SS');
+% allbtn.FFCurve= uicontrol('Style','pushbutton','Parent',ss_STEP,...
+%     'Units','normalized','Position',[0.4 0.1 0.15  0.05],'String','FFCurve','Tag','SS');
+allbtn.FFCurve.(ToolTipName)='Spline sketch GUI or sketch on Cartesian/Cylindrical grids.';
+% [0.85 0.02 0.1 0.13]
 
 setGOfontsize( gctab , 18 , {'UIControl'} )  % set fontsize for uicontrol in this tab
 
 sld_Font = uicontrol('Style', 'slider','Parent',ss_STEP,'Units','normalized',....
-    'Min',4,'Max',18,'Value',8,'Position', [0.15 0.05 0.4  0.03] ,'Tag','SS');   
+    'Min',4,'Max',18,'Value',8,'Position', [0.15 0.02 0.4  0.03] ,'Tag','SS');   
 sld_Font.Callback=@(src,evn)set_CadDOM_FontSize(src,evn) ;
 sld_Font.(ToolTipName) = 'Use this slider to change all the fontsizes of UI components in this figure.';
-textFont = uicontrol('Style','text','Parent',ss_STEP,'Units','normalized','Position', [0.05 0.05 0.1  0.03],'String','Font Size' ,'Tag','SS');   
+textFont = uicontrol('Style','text','Parent',ss_STEP,'Units','normalized','Position', [0.05 0.02 0.1  0.03],'String','Font Size' ,'Tag','SS');   
+AssignIcon( allbtn.FFCurve,'SplineGUI.jpg' ) ;  
+
 %% -------Assembly tab
 allaxes.Assemblymain= axes(ss_Assembly,'Position',[0.05 0.07 0.6 0.88 ],'Tag','AssemblyMain' ); hold on;
 allaxes.AssemblymainHiden = axes(ss_Assembly,'Position',[0.05 0.07 0.6 0.88 ],'Visible','off','hittest','off','Tag','HidenAssemblyMain'); % Invisible axes
@@ -275,8 +284,8 @@ allbtn.MechOH3.(ToolTipName)='For assigning the same setting to all overhang pai
 OHtext1 = uicontrol(ss_OH,'Style','text','Units','normalized','Position',[0.7 0.05 0.1 0.02],'String','Text1','Tag','OHText1','HorizontalAlignment','left');
 OHtext2 = uicontrol(ss_OH,'Style','text','Units','normalized','Position',[0.85 0.05 0.1 0.02],'String','Text2','Tag','OHText2','HorizontalAlignment','left');
 
-str2 = cellfun(@num2str,num2cell([0, 6:12, 20]),'uniformoutput',0);
-str= {'3''','5'''}; str3= {'Connected','Free end'};
+str2 = cellfun(@num2str,num2cell([0, 6:12, 14 , 16 , 18, 20]),'uniformoutput',0);
+str= {'3''','5'''}; str3= {'Connected','Free end' ,'Double crossover', 'Single crossover', 'Double overhang1', 'Double overhang2' };
 t = uitable(ss_OH,'Units','normalized','Position',[ 0.7000    0.2500    0.2800    0.5800],'ColumnFormat',({[]  str [] [] str str2 str2 str3}),...
        'ColumnEditable', false,'ColumnName',{'A','B','C','D','E','F','G','H','I'},'Visible','off','Tag','OHTable');  
 TStrO='<html><font size=5>Location</h1></html>' ; 
@@ -304,7 +313,7 @@ TooltipStr = [TooltipStr newline 'Enable column allows to temporarily ignored in
 TooltipStr = [TooltipStr newline 'Depend on the selected primes, it had multiple combinations to design the corresponding closing strand(See the schematic).'] ;
 TooltipStr = [TooltipStr newline 'See UI operations in the instructions.'] ;
 
-set(t,'Tooltip', TooltipStr) ;
+% set(t,'Tooltip', TooltipStr) ;
 % t.Tooltip=TooltipStr;
 
 %%
@@ -410,7 +419,7 @@ oxDNASlider.Max =4 ;
 oxDNACheck=uicontrol(sss_Confforce,'Style','checkbox','String','Include Closing strand',...
     'Units','normalized','Position',[0.7 0.15 0.2 0.1],'Tag','check_oxdna');
 
-% sss_pattern
+% sss_pattern--------------
 % allaxes.oxDNA2Pat= axes(sss_pattern,'Position',[0.05 0.25 0.5 0.7],'Tag','oxDNA2Pat');  %hold on; 
 % allbtn.oxDNAPat1= uicontrol(sss_pattern,'Style','pushbutton',...
 %     'Units','normalized','Position',[0.6 0.05 0.08 0.1],'String','Initial oxDNAPattern','Tag','btn_oxDNAPat1');
@@ -419,10 +428,12 @@ oxDNACheck=uicontrol(sss_Confforce,'Style','checkbox','String','Include Closing 
 % allbtn.oxDNAPat3= uicontrol(sss_pattern,'Style','pushbutton',...
 %     'Units','normalized','Position',[0.8 0.05 0.08 0.1],'String','Export BUILD','Tag','btn_oxDNAPat3');
 % str2 = cellfun(@num2str,num2cell(1:3),'uniformoutput',0);
-% popOxdnaPattern   = uicontrol(sss_pattern,'Style', 'popup',...
+% popOxdnaPattern   = uicontrol(sss_pattern,'Style', 'listbox',...
 %     'String', str2,'Unit','normalized','Position', [0.6 0.2 0.08 0.1],'Tag','popOxdnaPattern'); 
 % checkH_oxDNAPat = uicontrol(sss_pattern,'Style', 'checkbox','String', 'Trans/Rotate','Unit','normalized','Position', [0.7 0.2 0.08 0.1],'Tag','checkH_oxDNAPat'  ); 
 % editH_oxDNAPat = uicontrol(sss_pattern,'Style', 'edit','String', '1','Unit','normalized','Position', [0.9 0.2 0.08 0.1],'Tag','editH_oxDNAPat'   ); 
+% %-----------------------
+
 % sss_Traj
 allaxes.oxDNATrajAxe1= axes(sss_Traj,'Position',[0.05 0.25 0.5 0.7],'Tag','oxDNATrajAxe1');  %hold on; 
             ForLegend=line(nan, nan, 'Linestyle', 'none', 'Marker', 'none', 'Color', 'none');
@@ -484,6 +495,8 @@ HCobject= partHC(allGraphics) ;
 % readSTEPFile(allGraphics,ss_STEP)
 allbtn.StartSTEP.Callback=@(src,evn)readSTEPFile(src,evn,allGraphics,ss_STEP ,allbtn) ;
 allbtn.StartPoints.Callback=@(src,evn)readSTEPFile(src,evn,allGraphics,ss_STEP ,allbtn) ;
+allbtn.FFCurve.Callback=@(src,evn)FFCurve(src,evn,allGraphics,ss_STEP ,allbtn) ;
+
 % allbtn.MechScafAgain.Callback= @(src,evn)SearchScaf_every13(src,evn) ;
 
 allbtn.MechScafAgain.Callback= @(src,evn)SearchScaf(src,evn) ;

@@ -2,22 +2,15 @@ function varargout=plotScaf2_Helix_V2( GetHyperB,CornerNotation,Isstap ,color , 
 
 % old :function pScaf2H=plotScaf2_Helix( GetHyperB,CornerNotation  )
 %Use in: cadnano and oxDNA panels
-%   V2: removed old helix function. Assume all use overhang's function to
-%   get helix
+% Update for MagicDNA2, July 30 2020   
+%
+%
 
-SacfR=GetHyperB.ScafRouting{1} ;
-for k = 2 : length(GetHyperB.ScafRouting)
-    SacfR= [SacfR ; GetHyperB.ScafRouting{k}    ] ;
-end
-
-MaxBase=max(SacfR(:,3));
-
-skipPattern1=9:60:MaxBase;   % skip mod2 =0   %test 4/20
-skipPattern2=39:60:MaxBase;
 
 AllSkipBase =GetHyperB.skipBase ;
+AllinsertBase =GetHyperB.insertBase ;
 
-Coeff= 0.85*0.4 ;
+% Coeff= 0.85*0.4 ;
 
 StapHelixCell=cell(1,length(CornerNotation) );
 StapHelix2Cell=cell(1,length(CornerNotation) );
@@ -25,7 +18,7 @@ BasecCenterCell =  cell(1,length(CornerNotation) );
 
 NVecCell =  cell(length(CornerNotation),1 );
 BundleRoutCell=cell(length(CornerNotation),1 );
-pScaf2H=cell(1,1) ;
+pScaf2H=cell(length(CornerNotation),1) ;
 pScaf_center=cell(length(CornerNotation) ,1) ;
 for stai=1:length(CornerNotation)   %actually mean scaffold, in case multi scaffolds in futures
 
@@ -67,18 +60,20 @@ for stai=1:length(CornerNotation)   %actually mean scaffold, in case multi scaff
         InplaneXY=Bundle.findExtraCylInplanePosition(  GetHyperB.RelateTable, ColRow,fRefCyl)   ;%
         BaseStart=StapAll(edgeinSCR,2);   BaseEnd=StapAll(edgeinSCR+1,2);
         
-        if  strcmp(Bundle.Lattice, 'Square') && Cyl~=-1   % not on overhang
-            if xor(BaseStart<BaseEnd,Isstap~=1)  %go to left------------------stap, important, for scaffold it is opposite
-                %                         skipP=skipPattern2;
-                skipP=AllSkipBase(AllSkipBase(:,1)==C5Cyl,2) ;
-            else
-                %                         skipP=skipPattern1;
-                skipP=AllSkipBase(AllSkipBase(:,1)==C5Cyl,2) ;
-            end
-        else
-            skipP=[];        %only square lattice needs skip
-            
-        end
+%         if  strcmp(Bundle.Lattice, 'Square') && Cyl~=-1   % not on overhang
+%             if xor(BaseStart<BaseEnd,Isstap~=1)  %go to left------------------stap, important, for scaffold it is opposite
+%                 %                         skipP=skipPattern2;
+%                 skipP=AllSkipBase(AllSkipBase(:,1)==C5Cyl,2) ;
+%             else
+%                 %                         skipP=skipPattern1;
+%                 skipP=AllSkipBase(AllSkipBase(:,1)==C5Cyl,2) ;
+%             end
+%         else
+%             skipP=[];        %only square lattice needs skip
+%             
+%         end
+
+        skipP=AllSkipBase(AllSkipBase(:,1)==C5Cyl,2) ;
         if BaseStart<BaseEnd
             Vertical_NVec = [0 ,0 ,1] ;
         else
@@ -88,6 +83,17 @@ for stai=1:length(CornerNotation)   %actually mean scaffold, in case multi scaff
         
         
         BasesArr =  setdiff(linspace(BaseStart,BaseEnd , abs(BaseStart-BaseEnd) +1  ) , skipP,'stable') ;
+                       %-----Introduce insert
+               insertP=AllinsertBase(AllinsertBase(:,1)==C5Cyl,2) ;insertP=reshape(insertP, 1,[]);
+               if ~isempty(intersect(insertP ,BasesArr ))
+                   if BasesArr(1)>BasesArr(end)
+                       BasesArr=sort([BasesArr,intersect(insertP ,BasesArr )] ,'descend')  ;
+                   else
+                       BasesArr=sort([BasesArr,intersect(insertP ,BasesArr )] ,'ascend')    ;
+                   end
+               end
+               %----------
+        
         Global_XYZ=Bundle.HelixRegardlessCylinder(1.06,Isstap,InplaneXY,BasesArr,ThefSimilarDirCylder) ;   %  already assign as scaffold domain (rr,isstap,......)
         % get 3d coordinate section by section
         PartHelix2= Global_XYZ(:,1:3) ;
@@ -123,11 +129,15 @@ for stai=1:length(CornerNotation)   %actually mean scaffold, in case multi scaff
             NVec(kc:kc+size(PartHelix2,1)-1,: )=transpose(Bundle.TransformMatrix2(1:3,1:3)*Vertical_NVec' )  ;
             BundleRout(kc:kc+size(PartHelix2,1)-1,: )=[BundleR ,BasesArr'] ;
             
+%             if ~isempty(intersect(insertP ,BasesArr ))
+%                 sdfsf=3
+%             end
             
         end
         %          PartHelix2V2=PartHelix2;
         StapHelix(kc:kc+size(PartHelix2,1)-1,: )=PartHelix2 ;
         kc=kc+size(PartHelix2,1);    % accumulate
+%         size(PartHelix2,1)
     end
     %
     

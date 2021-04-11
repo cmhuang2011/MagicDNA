@@ -7,22 +7,31 @@ function [ TTAllTraj ] = FcnCancelDrift( AllTraj,boxs )
 
 boxsize= boxs ;
 
-
+boxCenter = 0.5*boxsize*ones(1,3) ;
 % figure; 
 % hx=histogram(AllTraj(:,1,:)); hold on ;
 % hy=histogram(AllTraj(:,2,:)); hz= histogram(AllTraj(:,3,:)) ; 
 % 
 % legend([hx,hy,hz], 'x ' ,'y ' ,'z '  ) ;
-tic
-TTAllTraj=AllTraj ;
+% tic
 for iF=1: size(AllTraj,3)
-    ConfT= TTAllTraj(:,:,iF) ;
+    ConfT= AllTraj(:,1:3,iF) ;
+ Center = mean(ConfT(:,1:3)) ;
+ ConfT=ConfT - repmat(Center, size(ConfT,1),1) + repmat(boxCenter, size(ConfT,1),1) ;
+ AllTraj(:,1:3,iF) =ConfT ;
+end
+
+
+TTAllTraj=AllTraj ;
+for iF=192: size(AllTraj,3)
+    ConfT= TTAllTraj(:,1:3,iF)- repmat(0.5*ones(1,3)*boxs, size(TTAllTraj,1) ,1)    ;
     
 %       figure(7);  clf;
 % hx1=histogram(ConfT(:,1)); hold on ;
 % hy1=histogram(ConfT(:,2)); hz1= histogram(ConfT(:,3)) ; 
 %   legend([hx1,hy1,hz1], 'x ' ,'y ' ,'z '  ) ;
-   eedge= 0:5:boxsize ;
+%    eedge= 0:1:boxsize ;
+   eedge= -1*boxsize:5:2*boxsize ;
 
 [N1,edges1] = histcounts(ConfT(:,1) ,eedge ) ;
 [N2,edges2] = histcounts(ConfT(:,2) ,eedge) ;
@@ -88,7 +97,7 @@ for iF=1: size(AllTraj,3)
    end
    %     
    
-   TTAllTraj(:,:,iF)=ConfT ;
+   TTAllTraj(:,1:3,iF)=ConfT ;
     
 %    if iF==161
 %     figure(72);  clf ;
@@ -100,7 +109,7 @@ for iF=1: size(AllTraj,3)
    
 end
 
-toc
+% toc
 
 
 

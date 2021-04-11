@@ -41,10 +41,65 @@ classdef jsonObject <handle
         skipPosition=[];
         %------------May 02 2019
         MergedJson_dat=[];
+        %------July 22 2020
+        DomainStapOnScaf =[] ;
+        %----------MagicDNA2 
+        skipC4 =[];   %[C4 base] list
+        insertC4 =[];   %[C4 base] list
+        
         
     end
+
     
     methods
+
+%         function ExportNewJSON(obj)
+%             NNdat=obj.Odat;
+%             
+% %             prompt = {'Enter File name:'};
+% %             dlg_title = 'Input';
+% %             num_lines = 1;
+% %             defaultans = {'No'};
+% %             answer = inputdlg(prompt,dlg_title,num_lines,defaultans);  
+%             answer{1} = 'TestJJJ' ;
+%             if strcmp(answer,'No')
+%                 return;
+%             end
+%            file_name=strcat(answer{1},'.json');
+%            
+%                             TTtext=savejson('Title',NNdat2,'ArrayIndent',0,'Compact',1 );
+%                 
+%                 %                 TTtext=savejson('Title',NNdat,'ArrayIndent',0,'Compact',1 );
+%                 TTtext(1:10)=[];
+%                 TTtext(end-1:end)=[];
+%                 IOfSC2=strfind(TTtext, ',[-999,-888]');  %for color json export
+%                 for removedd=1:length(IOfSC2)
+%                     UUdataPosittion=strfind(TTtext, ',[-999,-888]');  %for color json export
+%                     UUdataPosittion;
+%                     Exxtraindex= UUdataPosittion(1);
+%                     TTtext(Exxtraindex:Exxtraindex+11)=[];
+%                     %                  Cop=strfind(TTtext, ',[-999,-888]');
+%                 end
+%                 SecTerm999888=strfind(TTtext, '-999,-888');  %for color json export
+%                 for removedd=1:length(SecTerm999888)
+%                     UUdataPosittion=strfind(TTtext, '-999,-888');  %for color json export
+%                     if ~isempty(UUdataPosittion)
+%                         Exxtraindex= UUdataPosittion(1);
+%                     end
+%                     TTtext(Exxtraindex:Exxtraindex+8)=[];
+%                 end    
+%                 
+%                 fileID = fopen([JsonFolder file_name],'w');
+%                 fprintf(fileID,TTtext);
+%                 fclose(fileID);
+%                 fprintf('print json file %s  \n',file_name) ;
+%                 
+%                 
+% %             sdf=3
+%             
+%         end
+        
+        
         function obj=jsonObject()
             %         obj=jsonObject()
             %---------debug
@@ -55,6 +110,7 @@ classdef jsonObject <handle
             [obj.filename,obj.filepath,FilterIndex]= uigetfile({'*.json','JSONfile' },'Select the json file');
             dat=loadjson(strcat(obj.filepath,obj.filename));
             obj.Odat=dat;
+            
             ColorCode=[-1 ,-1 ,-1];
             EffecCyl=[];
             for k=1:length(dat.vstrands)
@@ -69,7 +125,19 @@ classdef jsonObject <handle
             NumList=[-1,-1,-1,-1];    %[k, num, col , row, GcX, GcY]
             Eff=[];
             for k=1:length(dat.vstrands)
-                NumList=[NumList;   [k, dat.vstrands{k}.num,  dat.vstrands{k}.col,  dat.vstrands{k}.row ]    ];
+%                 if ~ismember(dat.vstrands{k}.num , NumList(:,2) )
+                    
+                    NumList=[NumList;   [k, dat.vstrands{k}.num,  dat.vstrands{k}.col,  dat.vstrands{k}.row ]    ];
+%                 else
+%                     MaxN_evv = max(NumList(mod(NumList(:,2),2)==0,2)  ) ;
+%                     MaxN_odd = max(NumList(mod(NumList(:,2),2)==1,2)  ) ;
+%                     if mod(dat.vstrands{k}.num ,2)==0
+%                         NumList=[NumList;   [k, MaxN_evv+2,  dat.vstrands{k}.col,  dat.vstrands{k}.row ]    ];
+%                     else
+%                         NumList=[NumList;   [k, MaxN_odd+2,  dat.vstrands{k}.col,  dat.vstrands{k}.row ]    ];
+%                     end
+%                 end
+                
             end
             NumList=setdiff(NumList,[-1,-1,-1,-1],'rows');
             NumList(:,end+1:end+2)=0;
@@ -96,7 +164,11 @@ classdef jsonObject <handle
                     %                 Scaf_Start= [ClyIndx ,Base];
                     Scaf_Start=[Scaf_Start; ones(size(Base))*ClyIndx,Base ];
                     %                 ColRowStart= [dat.vstrands{k}.col,dat.vstrands{k}.row]      ;
-                    ColRowStart=[ColRowStart ; dat.vstrands{k}.col,dat.vstrands{k}.row];
+                    
+                    %---------June 3 2020
+                    OnlyColRow = repmat( [ dat.vstrands{k}.col , dat.vstrands{k}.row],  sum(All) ,1) ;
+                    ColRowStart=[ColRowStart ;OnlyColRow  ] ;
+%                     ColRowStart=[ColRowStart ; dat.vstrands{k}.col , dat.vstrands{k}.row];
                     %                 ScafR_Skip(1)=dat.vstrands{k}.skip(Base+1);
                     %                   ScafR_Skip(1)=0;  %hard
                     %                 break;
@@ -110,7 +182,8 @@ classdef jsonObject <handle
                 
                 ScafR_AllBase=zeros( 10000,2); ks=2;
                 ColRow=zeros( 10000,2);
-                ScafR_AllBase(1,:)=Scaf_Start(sf_strandi,:) ;   ColRow(1,:)=ColRowStart(sf_strandi,:);
+                ScafR_AllBase(1,:)=Scaf_Start(sf_strandi,:) ;  
+                ColRow(1,:)=ColRowStart(sf_strandi,:);
                 Current=ScafR_AllBase(1,:) ; nW =0;
                 while 1
                     Cyli= NumList(NumList(:,2)==Current(1),1) ;
@@ -151,8 +224,8 @@ classdef jsonObject <handle
             
             %             skipPosition(:,2)=skipPosition(:,2)-1 ;
             IndEven= mod(skipPosition(:,1),2)==0 ;
-            skipPosition(IndEven,2)=skipPosition(IndEven,2)-1 ;
-            skipPosition(~IndEven,2)=skipPosition(~IndEven,2)+1 ;
+%             skipPosition(IndEven,2)=skipPosition(IndEven,2)-1 ;
+%             skipPosition(~IndEven,2)=skipPosition(~IndEven,2)+1 ;
             
             obj.skipPosition=skipPosition;
             
@@ -177,7 +250,7 @@ classdef jsonObject <handle
                     
                 end
             end
-            
+%             return
             
             for stpi= 1:m_stpStart
                 stpi;
@@ -211,6 +284,22 @@ classdef jsonObject <handle
                     obj.getSeq ;
             obj.getSegment;
             obj.getSegment2;
+            %--------MagicDNA2, July 30 2020
+            skipC4Temp=[-1 -1];
+            for k= 1 :length(dat.vstrands)
+               Bases = find(dat.vstrands{k}.skip==-1 ) -1 ;  % use python index
+               skipC4Temp= [skipC4Temp ; [dat.vstrands{k}.num*ones(length(Bases),1), Bases' ] ] ;
+            end 
+            skipC4Temp=skipC4Temp(2:end ,:) ;
+            obj.skipC4 = skipC4Temp ;
+                %----
+            insertC4Temp=[-1 -1];
+            for k= 1 :length(dat.vstrands)
+               Bases = find(dat.vstrands{k}.loop>0 ) -1 ;  % use python index
+               insertC4Temp= [insertC4Temp ; [dat.vstrands{k}.num*ones(length(Bases),1), Bases' ] ] ;
+            end 
+            insertC4Temp=insertC4Temp(2:end ,:) ;
+            obj.insertC4 = insertC4Temp ;            
             
         end
         
@@ -481,7 +570,7 @@ classdef jsonObject <handle
             ScafR= [ScafR; obj.ScafR_AllBase{k}];
             end
             ScafR =setdiff(ScafR, obj.skipPosition ,'rows','stable' ) ;
-            
+            obj.DomainStapOnScaf =cell(size(obj.Stap_Routing ) ) ;
             for is=1:length(obj.Stap_Routing )
                 stapi= obj.Stap_Routing{is} ;
                 stapi =setdiff(stapi, obj.skipPosition ,'rows','stable' ) ;
@@ -500,6 +589,7 @@ classdef jsonObject <handle
                     StpRcell{segj+1}=MM(Inds,:) ;
                 end
                 stapSeg{is}=chartable ;
+                 obj.DomainStapOnScaf{is} =StpRcell ;
                 [w,v]=cellfun(@size, StpRcell);
                 stapSegR{is} =w' ;
 %                                fprintf('Staple %i has segments: %s \n',is,num2str(w')) ;
@@ -906,7 +996,22 @@ classdef jsonObject <handle
         
         function exportNewJson(obj)
             
-            TTtext=savejson('Title',obj.Odat,'ArrayIndent',0,'Compact',1 );
+            %-----------
+            ArrSize = 384 ;
+            
+            NewDat= obj.Odat ;
+            
+            for k = 1:length(NewDat.vstrands)
+            NewDat.vstrands{k}.skip= NewDat.vstrands{k}.skip(1:ArrSize) ;
+            NewDat.vstrands{k}.loop= NewDat.vstrands{k}.loop(1:ArrSize) ;
+            
+            NewDat.vstrands{k}.scaf= NewDat.vstrands{k}.scaf(1:ArrSize, :) ;
+            NewDat.vstrands{k}.stap= NewDat.vstrands{k}.stap(1:ArrSize ,:) ;
+            end
+            %-------------
+            
+            
+            TTtext=savejson('Title',NewDat,'ArrayIndent',0,'Compact',1 );
             
             %                 TTtext=savejson('Title',NNdat,'ArrayIndent',0,'Compact',1 );
             TTtext(1:10)=[];
@@ -938,7 +1043,7 @@ classdef jsonObject <handle
             end
             
             
-            JsonFolder=[ pwd '\cadnano_jsonfile\'];
+            JsonFolder=[ pwd filesep];
             fileID = fopen([JsonFolder 'NewJson.json'],'w');
             fprintf(fileID,TTtext);
             fclose(fileID);

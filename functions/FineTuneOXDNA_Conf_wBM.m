@@ -91,7 +91,6 @@ scafInitNotFirst=0;
 %     
 % end
 [a,b]=hist(TStrand,unique(TStrand)) ;
-a0;
 StramdIndTable=[a;a0];
 
 
@@ -315,7 +314,7 @@ for iTransf= 1:max(BelongTransM)
     
     %                    OP3=PlotXYZV2Int;
     [regParams,~,w]=absor(A3byN,B3byN);
-    w.errmax
+%     w.errmax
     PosV=    regParams.R*A3byN + regParams.t*ones(1,size(B3byN,2)) ;
     BVecNew=    regParams.R*OldBVec ;
     NVecNew=    regParams.R*OldNVec ;
@@ -334,11 +333,12 @@ mmNewT=min(NewT(:,1:3)) ;
 MMNewT=max(NewT(:,1:3)) ;
 
 % boxsize= MMNewT-mmNewT +[30,30,30];
-boxsize=2.5*ceil(abs(mmNewT-MMNewT)/50)*50   ;
+boxsize=1.8*ceil(abs(mmNewT-MMNewT)/50)*50   ;
 
-NewT(:,1:3)= NewT(:,1:3) - ones(size(NewT,1),1)*( 0.5*(mmNewT+MMNewT)-boxsize/2) ;
+NewT(:,1:3)= NewT(:,1:3) - ones(size(NewT,1),1)*( 0.5*(mmNewT+MMNewT)) ;
 
-file2_name='prova33_bend.conf'
+fprintf('Exporting prova33.conf \n') ;
+file2_name='prova33.conf' ;
 fileID = fopen([PathName2 filesep file2_name],'w');
 % fileID = fopen(file2_name,'w');
 fprintf(fileID,'t = 0\n');

@@ -157,10 +157,35 @@ NewAdjM= fH.UserData.HyperBundle.BundleAdjM(RemainBundel,RemainBundel);
 %
 %
 InportHyperBundle=[];
-InportHyperBundle=hyperbundle(1,OldHyperB.containBundle{RemainBundel(1) } );
+
+
+Z1Arr=OldHyperB.containBundle{RemainBundel(1) }.Zbase1 ;
+Z2Arr=OldHyperB.containBundle{RemainBundel(1) }.Zbase2 ;
+InplaneXY = OldHyperB.containBundle{RemainBundel(1) }.CylInplanePosition ;
+    if strcmp(OldHyperB.containBundle{RemainBundel(1) }.type,'SQ')
+        AddBundle=  BundleCylinderSQ(1,[],Z1Arr,Z2Arr,InplaneXY) ;
+    else
+        AddBundle=  BundleCylinderHC(1,[],Z1Arr,Z2Arr,InplaneXY) ;
+    end
+AddBundle.TransformMatrix2=OldHyperB.containBundle{RemainBundel(1) }.TransformMatrix2;
+
+InportHyperBundle=hyperbundle(1,AddBundle );
+% InportHyperBundle=hyperbundle(1,OldHyperB.containBundle{RemainBundel(1) } );
 
 for k=2:length(RemainBundel)
-    AddBundle=  OldHyperB.containBundle{RemainBundel(k) } ;
+%     AddBundle=  OldHyperB.containBundle{RemainBundel(k) } ;
+    
+    Z1Arr=OldHyperB.containBundle{RemainBundel(k) }.Zbase1 ;
+    Z2Arr=OldHyperB.containBundle{RemainBundel(k) }.Zbase2 ;
+    InplaneXY = OldHyperB.containBundle{RemainBundel(k) }.CylInplanePosition ;
+    if strcmp(OldHyperB.containBundle{RemainBundel(k) }.type,'SQ')
+        AddBundle=  BundleCylinderSQ(1,[],Z1Arr,Z2Arr,InplaneXY) ;
+    else
+        AddBundle=  BundleCylinderHC(1,[],Z1Arr,Z2Arr,InplaneXY) ;
+    end
+    AddBundle.TransformMatrix2=OldHyperB.containBundle{RemainBundel(k) }.TransformMatrix2;
+    
+    
     InportHyperBundle=AddBundles(InportHyperBundle,AddBundle);
 end
 

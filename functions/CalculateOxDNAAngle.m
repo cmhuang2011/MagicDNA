@@ -130,8 +130,7 @@ btn = uicontrol('Parent',d,...
         scatter3(RefTwoPoints_Bi(:,1),RefTwoPoints_Bi(:,2),RefTwoPoints_Bi(:,3) , 86 ,'go','filled')
         RefInds_Bi = [find(InnerProd_Bi==max(InnerProd_Bi)) ,find(InnerProd_Bi==min(InnerProd_Bi)) ] ;
         RefInds_Bi=Ind_Bi(RefInds_Bi) ;
-        
-        
+                
         Bj_in_Mean = MeanConf(Ind_Bj ,:)  ;
         [coeff,score,latent,tsq2,explained,PCA_mean] = pca(Bj_in_Mean) ;
         Ref_BjAxis =  coeff(:,1)' ;
@@ -142,6 +141,18 @@ btn = uicontrol('Parent',d,...
         scatter3(RefTwoPoints_Bj(:,1),RefTwoPoints_Bj(:,2),RefTwoPoints_Bj(:,3) , 86 ,'go','filled')
         RefInds_Bj = [find(InnerProd_Bj==max(InnerProd_Bj)) ,find(InnerProd_Bj==min(InnerProd_Bj)) ] ;
         RefInds_Bj=Ind_Bj(RefInds_Bj) ;
+        
+        P1234 = MeanConf([RefInds_Bi, RefInds_Bj],: ) ;  %
+        ddd1 = min ([norm(P1234(1,:)-P1234(3,:)) , norm(P1234(1,:)-P1234(4,:)) ] ) ;
+        ddd2 = min ([norm(P1234(2,:)-P1234(3,:)) , norm(P1234(2,:)-P1234(4,:)) ] ) ;
+        ddd3 = min ([norm(P1234(3,:)-P1234(1,:)) , norm(P1234(3,:)-P1234(2,:)) ] ) ;
+        ddd4 = min ([norm(P1234(4,:)-P1234(1,:)) , norm(P1234(4,:)-P1234(2,:)) ] ) ;
+        if ddd1<ddd2 
+            RefInds_Bi =flip(RefInds_Bi) ;
+        end
+        if ddd3>ddd4 
+            RefInds_Bj =flip(RefInds_Bj) ;
+        end
         %---------  for the arrows
             Conf =MeanConf;
             Ref_BiAxis= diff( Conf(RefInds_Bi,1:3) ) ;
@@ -168,6 +179,8 @@ btn = uicontrol('Parent',d,...
         
         Save_AvgNvec = zeros( size(TrajOri,3) ,6) ;
         Angles = zeros( size(TrajOri,3) ,1) ;
+        
+%         AnglesOnRefPlane = zeros( size(TrajOri,3) ,1) ;
         for frame = 1 :  size(TrajOri,3)
             Conf = TrajOri(:,:,frame ) ;
             
@@ -204,13 +217,16 @@ btn = uicontrol('Parent',d,...
             Save_AvgNvec(frame,:) = [AvgNvec_Bi,AvgNvec_Bj ] ;
             Angles(frame) = acosd( dot(AvgNvec_Bi,AvgNvec_Bj)/norm(AvgNvec_Bi)/norm(AvgNvec_Bj)) ;
             
-            %     if ismember(frame, [ 20 21])
-            %         Angles(frame)
-            %         AvgNvec_Bi
-            %         AvgNvec_Bj
-            %     end
+           %------------------
+          
+%             Conf ; 
+%             [coeff,score,latent] = pca(Conf(:,1:3)) ;
+%             NormalDir  =  coeff(:,3) ;
+%             ProjAvg_Bi  = AvgNvec_Bi-  dot(AvgNvec_Bi, NormalDir)/norm(NormalDir) ;
+%             ProjAvg_Bj  = AvgNvec_Bj-  dot(AvgNvec_Bj, NormalDir)/norm(NormalDir) ;
+%             AnglesOnRefPlane(frame)= acosd( dot(ProjAvg_Bi,ProjAvg_Bj)/norm(ProjAvg_Bi)/norm(ProjAvg_Bj)) ;
             
-            
+%               ssdf=3
         end
 %         save('Save_AvgNvec.mat','Save_AvgNvec');
         
@@ -226,7 +242,8 @@ btn = uicontrol('Parent',d,...
         end
         
         
-        pH= plot(Angles) ;
+        pH= plot(Angles) ; 
+%         pH2 = plot(AnglesOnRefPlane ,'-r') ;
         title(strcat('Selected bundles = [',num2str([Bi,Bj]),'] ' ,'{ }', 'R =', num2str(RatioBase),'{ }' ,'Mean =' , num2str(mean(Angles))  )  )   ;
         %         ax.UserData.StrL
         str = strcat( '[', num2str([Bi,Bj]) ,']' ,  ' ' , 'R =', num2str(RatioBase,'%3.1f') ) ;
@@ -238,6 +255,29 @@ btn = uicontrol('Parent',d,...
         
         xlabel('frame'); ylabel('angle (degree)')
         
+%         sdsf=3
+        %----CM, save result into MATLAB .mat file 
+%         oxDNA_ex.PathName
+%             prompt = {'Enter Variable name:'};  dlg_title = 'Input';
+%             num_lines = 1;   defaultans = {'Var1'};
+%             file3_name = inputdlg(prompt,dlg_title,num_lines,defaultans); 
+%             
+%             %-------
+%             prompt = {'Enter the value of grad'};
+%             dlgtitle = 'Grad Value';
+%             definput = {'0'};
+%             dims = [1 40];
+%             opts.Interpreter = 'tex';
+%             answer = inputdlg(prompt,dlgtitle,dims,definput,opts);
+%             
+%             SaveVar.str =  file3_name{1} ;
+%             SaveVar.Angles =Angles ;
+%             SaveVar.AnglesMean = mean(Angles) ;
+%             SaveVar.AnglesStd = std(Angles) ;
+%             SaveVar.grad = str2num( answer{1}) ;
+%         
+%             save(strcat('SQ2x4_r3_', file3_name{1},'.mat' ),'SaveVar')  ;
+            
     end
 
 

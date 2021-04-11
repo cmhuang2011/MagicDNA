@@ -1,4 +1,4 @@
-classdef oxDNATrajObject <handle
+classdef oxDNATrajObject < oxDNA_model
     %UNTITLED2 Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -17,11 +17,14 @@ classdef oxDNATrajObject <handle
         Traj=[];
         N_frame=[];
         Strand=[];
-        
+        TSeq;
         MeanConf=[];
         %         colorRGB=[];
         %         BaseColor =[];
         %         N=[] ;
+        Primes35 =[];
+        MutualTrapPair =[]; % from dsremain
+        
         
     end
     properties (Hidden = true)
@@ -37,6 +40,42 @@ classdef oxDNATrajObject <handle
         %       SphereR=0.2 ;
         CylR=0.1;   %0.1
         SphereR=0.3 ;
+        
+        %         POS_BACK = -0.4 ;
+        %         POS_MM_BACK1 = -0.34 ;
+        %         POS_MM_BACK2 = 0.3408 ;
+        %         POS_STACK = 0.34 ;
+        %         POS_BASE = 0.4 ;
+        %         GAMMA = 0.74 ; %POS_STACK - POS_BACK
+        %         %-----------
+        %         FENE_EPS =2.0;
+        %         FENE_R0_OXDNA =0.7525;
+        %         FENE_R0_OXDNA2 =0.7564;
+        %         FENE_DELTA =0.25;
+        %         FENE_DELTA2 =0.0625;
+        %         %----------- excluded volume
+        %         %1-> back-back 2->base-base 3->base-back 4->back-base
+        %         EXCL_EPS =2.0;
+        %         EXCL_S1 =0.7;  %sigma
+        %         EXCL_S2 =0.33;
+        %         EXCL_S3 =0.515;
+        %         EXCL_S4 =0.515;
+        %         EXCL_R1 =0.675;  %r star
+        %         EXCL_R2 =0.32;
+        %         EXCL_R3 =0.5;
+        %         EXCL_R4 =0.5;
+        %         EXCL_B1 =892.016223343;
+        %         EXCL_B2 =4119.70450017;
+        %         EXCL_B3 =1707.30627298;
+        %         EXCL_B4 =1707.30627298;
+        %         EXCL_RC1 =0.711879214356;
+        %         EXCL_RC2 =0.335388426126;
+        %         EXCL_RC3 =0.52329943261;
+        %         EXCL_RC4 =0.52329943261;
+        %-----------------
+        
+        
+        
     end
     
     
@@ -60,6 +99,84 @@ classdef oxDNATrajObject <handle
             scatter3(oxDNA.Traj(ReceptorPara.RecTraceBase,1 ,Frm) ,oxDNA.Traj(ReceptorPara.RecTraceBase,2 ,Frm),oxDNA.Traj(ReceptorPara.RecTraceBase,3 ,Frm),'filled') ;
             text(oxDNA.Traj(ReceptorPara.RecTraceBase,1 ,Frm) ,oxDNA.Traj(ReceptorPara.RecTraceBase,2 ,Frm),oxDNA.Traj(ReceptorPara.RecTraceBase,3 ,Frm),num2str([1:12]'))
         end
+        function BaseSite = GetBaseSite(obj,T )
+            BaseSite= T(:,1:3) + obj.POS_BASE*T(:,4:6) ;
+        end
+        function StackSite= GetStackSite(obj,T )
+            StackSite= T(:,1:3) + obj.POS_STACK*T(:,4:6) ;
+        end
+        function BackboneSite= GetBackboneSite(obj,T )
+            a2 = cross(T(:,7:9),T(:,4:6) ) ;
+            BackboneSite= T(:,1:3) + obj.POS_MM_BACK1*T(:,4:6) + obj.POS_MM_BACK2*a2 ;
+        end
+        function Energies = Cal_FENE(obj )
+            TotalFrame = obj.N_frame ; TotalBase = length(obj.Strand) ;
+            Energies= zeros(TotalFrame,1) ;
+            for k =1:TotalFrame
+                BackboneSite= GetBackboneSite(obj,obj.Traj(:,:,k) ) ;
+                for j = 1:max(obj.Strand)
+                    BaseInd = obj.Strand==j ;
+                    SubBB = BackboneSite(BaseInd,:) ;
+                    
+                    dxyz= diff(SubBB ,1) ;
+                    dr = sqrt(dxyz(:,1).^2+dxyz(:,2).^2+dxyz(:,3).^2 ) ;
+                    Vs_FENE = -obj.FENE_EPS*0.5*log(1- (dr-obj.FENE_R0_OXDNA2).^2/obj.FENE_DELTA2) ;
+                    
+                    Energies(k)= Energies(k) + sum(Vs_FENE) ;
+                end
+                fprintf('FENE Energy at frame %i = %7.6f \n',k, Energies(k)/TotalBase) ;
+            end
+            Energies=Energies/TotalBase;
+        end
+        
+        
+        function Energies = Cal_exc_bonded(obj)
+            TotalFrame = obj.N_frame ;             TotalBase = length(obj.Strand) ;
+            Energies= zeros(TotalFrame,1) ;
+            for k =1:TotalFrame
+                BackboneSite= GetBackboneSite(obj,obj.Traj(:,:,k) ) ;
+                BaseSite=GetBaseSite(obj,obj.Traj(:,:,k) ) ;
+                for j = 1:max(obj.Strand)
+                    BaseInd = obj.Strand==j ;
+                    SubBackbone = BackboneSite(BaseInd,:) ;
+                    SubBase =  BaseSite(BaseInd,:) ;
+                    %----2.Base-Base
+                    dxyz= diff(SubBase ,1) ;   dr = sqrt(dxyz(:,1).^2+dxyz(:,2).^2+dxyz(:,3).^2 ) ;
+                    LargerThanRC = dr> obj.EXCL_RC2 ;
+                    SmallerThanRstar = dr <  obj.EXCL_R2 ;
+                    Middle= and(LargerThanRC==0 ,SmallerThanRstar==0) ;
+                    
+                    Eng1=  get_Vlj(obj , dr(SmallerThanRstar ), obj.EXCL_EPS , obj.EXCL_S2) ;
+                    Eng2=  get_Vsmooth(obj, dr(Middle ), obj.EXCL_B2, obj.EXCL_RC2, obj.EXCL_EPS ) ;
+                    Energies(k)= Energies(k) + Eng1 +Eng2  ;
+                    %                   %----3.base-back
+                    dxyz=SubBase(1:end-1 ,:) - SubBackbone(2:end,:) ; dr = sqrt(dxyz(:,1).^2+dxyz(:,2).^2+dxyz(:,3).^2 ) ;
+                    LargerThanRC = dr> obj.EXCL_RC3 ;
+                    SmallerThanRstar = dr <  obj.EXCL_R3 ;
+                    Middle= and(LargerThanRC==0 ,SmallerThanRstar==0) ;
+                    
+                    Eng1=  get_Vlj(obj , dr(SmallerThanRstar ), obj.EXCL_EPS , obj.EXCL_S3) ;
+                    Eng2=  get_Vsmooth(obj, dr(Middle ), obj.EXCL_B3, obj.EXCL_RC3, obj.EXCL_EPS ) ;
+                    Energies(k)= Energies(k) + Eng1 +Eng2  ;
+                    %----4.back-base
+                    dxyz=SubBackbone(1:end-1 ,:) - SubBase(2:end,:) ; dr = sqrt(dxyz(:,1).^2+dxyz(:,2).^2+dxyz(:,3).^2 ) ;
+                    LargerThanRC = dr> obj.EXCL_RC4 ;
+                    SmallerThanRstar = dr <  obj.EXCL_R4 ;
+                    Middle= and(LargerThanRC==0 ,SmallerThanRstar==0) ;
+                    
+                    Eng1=  get_Vlj(obj , dr(SmallerThanRstar ), obj.EXCL_EPS , obj.EXCL_S4) ;
+                    Eng2=  get_Vsmooth(obj, dr(Middle ), obj.EXCL_B4, obj.EXCL_RC4, obj.EXCL_EPS ) ;
+                    Energies(k)= Energies(k) + Eng1 +Eng2  ;
+                    %-----
+                end
+                fprintf('Exc.V Energy at frame %i = %7.6f \n',k, Energies(k)/TotalBase) ;
+            end
+            Energies=Energies/TotalBase;
+        end
+        
+        
+        
+        
         function Trace(obj, WhichBase)
             figure;clf; hold on;
             subplot(3,3,1) ;
@@ -127,19 +244,45 @@ classdef oxDNATrajObject <handle
             subplot(3,3,3) ;  title( strcat('RMS = ', num2str(rms(SaveG3)) ) ) ;
         end
         
-        function  obj=oxDNATrajObject()
-            
+        function  obj=oxDNATrajObject(varargin)
+%             nargin 
+%             varargin
+%             length(varargin{1})
+%             return 
             %             addpath('jsonlab') ;
-            
-            [obj.Topology_filename,PathName1,FilterIndex] = uigetfile({'*.dat;*.top','Topogyformat '},'Select the topology file');
-            obj.Spwd=pwd;     obj.PathName=PathName1;     cd(PathName1);
-            
-            [provaConf,PathName2,FilterIndex]= uigetfile({'*.dat;*.conf','Initial Conf file' },'Select the initial Configuration file');
-            obj.provaConf=provaConf;
-            
-            [Traj_filename,PathName2,FilterIndex]= uigetfile({'*.dat;*.conf','Trajectory file' },'Select the Trajectory file');
-            obj.Traj_filename=Traj_filename;
-            
+            if length(varargin{1})==1
+                
+                %-----use for batch input
+                PathName1=[varargin{1}{1} filesep]; PathName2=[varargin{1}{1} filesep];
+                obj.Topology_filename = 'prova.top' ;
+                obj.Spwd=pwd;  obj.PathName=PathName1;   cd(PathName1);
+%                 provaConf = 'stage4.conf' ; 
+                provaConf = 'prova33.conf' ; % M
+%                 provaConf='relaxed_go3.conf';
+%                  provaConf='lastConf_simulation.conf';
+%                  provaConf = 'ForClamp.conf' ;
+
+                obj.provaConf=provaConf;
+%                  Traj_filename ='traj1e8_f100.dat' ;  % 
+%                 Traj_filename ='traj1e7.dat' ;  % 
+%                 Traj_filename ='traj2e8_f200_dt2.dat' ;  % 
+                 Traj_filename ='traj_Clamp1e8_f200_dt1.dat' ;  % 
+% Traj_filename='traj_rpp.dat';
+%                                 Traj_filename ='traj1e8_f100.dat' ;
+
+                obj.Traj_filename=Traj_filename;
+                %                  obj.Topology_filenam=
+                %                  sddsf=3
+            else
+                [obj.Topology_filename,PathName1,~] = uigetfile({'*.dat;*.top','Topogyformat '},'Select the topology file');
+                obj.Spwd=pwd;     obj.PathName=PathName1;     cd(PathName1);
+                
+                [provaConf,PathName2,~]= uigetfile({'*.dat;*.conf','Initial Conf file' },'Select the initial Configuration file');
+                obj.provaConf=provaConf;
+                
+                [Traj_filename,PathName2,~]= uigetfile({'*.dat;*.conf','Trajectory file' },'Select the Trajectory file');
+                obj.Traj_filename=Traj_filename;
+            end
             tic
             
             fileTransInd_name=strcat( 'BM.mat') ;
@@ -161,14 +304,14 @@ classdef oxDNATrajObject <handle
             FirstRow=strsplit(A.textdata{1,1});
             NBase=str2double(FirstRow{1});
             % NStrand=str2double(FirstRow{2});
-            TSeq= A.textdata((2:NBase+1)',2);
+            obj.TSeq= A.textdata((2:NBase+1)',2);
             
             QQ=A.textdata((2:NBase+1)',1);
             TStrand=zeros(size(QQ));
             for k=1:length(QQ)
                 TStrand(k)=str2double(QQ{k});
             end
-            
+            obj.Primes35 = A.data;
             %
             %             %-------- read json file to get color
             %                         [Json_filename,PathName3,FilterIndex3]= uigetfile({'*.json','json file' },'Select the json file');
@@ -314,14 +457,14 @@ classdef oxDNATrajObject <handle
                 end
                 
                 
-                
-                AllTraj  = FcnCancelDrift( AllTraj,obj.Boxs(1) ) ;
+                %
+                %                 AllTraj  = FcnCancelDrift( AllTraj,obj.Boxs(1) ) ;
                 
                 %%
                 
                 %                 N_frame=N_frame+1;
-                %                     AllTraj=single(AllTraj) ;  % signle-digit precision
-                save('AllTraj.mat','AllTraj', '-v7.3')
+%                                     AllTraj=single(AllTraj) ;  % signle-digit precision
+%                                 save('AllTraj.mat','AllTraj', '-v7.3')
                 toc
             end  % end of try
             
@@ -347,40 +490,170 @@ classdef oxDNATrajObject <handle
             %                             end
             %                             scafInitNotFirst=1;
             %                         end
-            obj.Strand=TStrand ;
-            AllTraj  = FcnCancelDrift( AllTraj,obj.Boxs(1) ) ;
+%             size(AllTraj)
+% obj.Boxs=[600 600 600]
+            obj.Strand=TStrand ; CutLine =0.5 ;
+%             AllTraj  = FcnCancelDrift( AllTraj,obj.Boxs(1) ) ;
+            for k = 1: size(AllTraj ,3)
+            XYZOneConf = AllTraj(:,1:3,k ) ;
+            
+% % %             if k==1
+%              XYZOneConf(:,1)  = rem(XYZOneConf(:,1) , obj.Boxs(1)) ;
+%              XYZOneConf(:,2)  = rem(XYZOneConf(:,2) , obj.Boxs(2)) ;
+%              XYZOneConf(:,3)  = rem(XYZOneConf(:,3) , obj.Boxs(3)) ;
+% %             else
+%              XYZOneConf(:,1)  = mod(XYZOneConf(:,1)-0.5*obj.Boxs(1)  , obj.Boxs(1)) ;
+%              XYZOneConf(:,3)  = mod(XYZOneConf(:,3)-0.5*obj.Boxs(3) , obj.Boxs(3)) ;
+  %    
+
+        
+           if max(XYZOneConf(:,1)) - min(XYZOneConf(:,1)) >obj.Boxs(1)
+             XYZOneConf(:,1)  = mod(XYZOneConf(:,1)-CutLine*obj.Boxs(1) , obj.Boxs(1)) ;
+           end
+%           Inds = XYZOneConf(:,1)<50 ;  % hard
+%          XYZOneConf(Inds,1)=XYZOneConf(Inds,1)+obj.Boxs(1) ;
+
+           if max(XYZOneConf(:,2)) - min(XYZOneConf(:,2)) >obj.Boxs(2)
+             XYZOneConf(:,2)  = mod(XYZOneConf(:,2)-CutLine*obj.Boxs(2) , obj.Boxs(2)) ;
+           end
+
+           if max(XYZOneConf(:,3)) - min(XYZOneConf(:,3)) >obj.Boxs(3)
+             XYZOneConf(:,3)  = mod(XYZOneConf(:,3)-CutLine*obj.Boxs(3) , obj.Boxs(3)) ;
+           end
+
+             
+%              XYZOneConf(:,1)  = rem(XYZOneConf(:,1)-min(XYZOneConf(:,1))  , obj.Boxs(1)) ;
+%              XYZOneConf(:,2)  = rem(XYZOneConf(:,2)-min(XYZOneConf(:,2)), obj.Boxs(2)) ;
+%              XYZOneConf(:,3)  = rem(XYZOneConf(:,3)-min(XYZOneConf(:,3)) , obj.Boxs(3)) ;
+
+             
+%                 
+% %             end
+             
+%              XYZOneConf(:,1)  = XYZOneConf(:,1)  - obj.Boxs(1)*ceil(XYZOneConf(:,1) /obj.Boxs(1) ) ;
+%             XYZOneConf(:,2)  = XYZOneConf(:,2)  - obj.Boxs(2)*ceil(XYZOneConf(:,2) /obj.Boxs(2) ) ;
+%             XYZOneConf(:,3)  = XYZOneConf(:,3)  - obj.Boxs(3)*ceil(XYZOneConf(:,3) /obj.Boxs(3) ) ;
+            AllTraj(:,1:3,k )= XYZOneConf ;            
+            end
+            fprintf('Assume periodic boundary condition. Minimun image convention \n')
+            
             
             obj.N_frame=N_frame ;
             Maxbox=max(AllTraj(:,1:3),[],3) ;
             Minbox=min(AllTraj(:,1:3),[],3) ;
             Center= mean(0.5*(Maxbox+Minbox)) ;
             
-            for k=1:N_frame
-                %                 AllTraj(:,1:3,k)=AllTraj(:,1:3,k)- Center ;
-                AllTraj(:,1:3,k)=AllTraj(:,1:3,k)*0.85 ;
+           ScafInd = obj.Strand==1 ;
+            for k=1:1  %N_frame
+               
+%                 AllTraj(:,1:3,k)=AllTraj(:,1:3,k)- Center ;
+                
+                
+                 ScafCenter =   mean(AllTraj(ScafInd,1:3,k) ) ;
+                 AllTraj(:,1:3,k)=AllTraj(:,1:3,k)- ScafCenter ; %TdT 36
+                 
+                 
+                %                 AllTraj(:,1:3,k)=AllTraj(:,1:3,k)*0.85 ;
+                %
+                %                   for strandi = 1 :max(obj.Strand)
+                %                       BaseInd = obj.Strand== strandi ;
+                %                       AllTraj(BaseInd,1:9,k) = flip(  AllTraj(BaseInd,1:9,k) ,1) ;
+                %
+                %                      if k ==1
+                %                          obj.Primes35(BaseInd ,:) =flip( obj.Primes35(BaseInd ,:)  ,1) ;
+                %                          obj.TSeq(BaseInd ,:) =flip( obj.TSeq(BaseInd ,:)  ,1) ;
+                %                      end
+                %
+                %                   end
+                
             end
             
-            %             T1= AllTraj(:,1:3,1) ;
-            %              for k=2:N_frame
-            %                [regParams,~,~]=absor(AllTraj(:,1:3,k)' ,T1');
-            % %                regParams.R*AllTraj(:,1:3,k)'+ regParams.t -T1' ;
-            %                AllTraj(:,1:3,k)= transpose(regParams.R*AllTraj(:,1:3,k)'+ regParams.t ) ;
-            %                AllTraj(:,4:6,k)= transpose(regParams.R*AllTraj(:,4:6,k)' ) ;
-            %              end
+%                         T1= AllTraj(:,1:3,1) ;
+%                          for k=2:N_frame
+%                            [regParams,~,~]=absor(AllTraj(:,1:3,k)' ,T1');
+%             %                regParams.R*AllTraj(:,1:3,k)'+ regParams.t -T1' ;
+%                            AllTraj(:,1:3,k)= transpose(regParams.R*AllTraj(:,1:3,k)'+ regParams.t ) ;
+%                            AllTraj(:,4:6,k)= transpose(regParams.R*AllTraj(:,4:6,k)' ) ;
+%                          end
+%             
+%             
+            
             
             obj.Traj=AllTraj ;
-            
-            
-            
-            
             cd(obj.Spwd);
             
             %             obj.getPcaTraj ;
             
+        end
+        
+        function ReaddSRemain(obj)
             
+            fffid=fopen(strcat(obj.PathName,'dSRemain.conf'));
+            if fffid==-1
+                [DsFile,PathName2,FilterIndex]= uigetfile({'*.dat;*.conf','Mutual trap file' },'Select the mutual trap file');
+                fffid=fopen(strcat(PathName2,DsFile));
+            else
+                PathName2=obj.PathName ;
+                DsFile='dSRemain.conf';
+            end
+            
+            
+            n =0; EnterZone = false;
+            while 1
+                Oneline = fgetl(fffid);
+                if strcmp(Oneline,'{')
+                    EnterZone=true ;
+                end
+                if strcmp(Oneline,'}') && EnterZone
+                    EnterZone=false ;
+                    n=n+1 ;
+                end
+                if Oneline==-1
+                    fclose(fffid);
+                    break
+                end
+            end
+            
+            PairList = zeros(n,2) ;
+            fffid2=fopen(strcat(PathName2,DsFile));
+            n =1; EnterZone = false;
+            while 1
+                Oneline = fgetl(fffid2);
+                if Oneline==-1
+                    fclose(fffid2);
+                    break
+                    
+                end
+                if strcmp(Oneline,'{')
+                    EnterZone=true ;
+                end
+                
+                if contains(Oneline,'particle') && ~contains(Oneline,'ref_particle') && EnterZone
+                    pp = find(Oneline == '=') ;
+                    PairList(n,1) = str2num(Oneline(pp+1:end)) ;
+                end
+                if contains(Oneline,'ref_particle') && EnterZone
+                    pp = find(Oneline == '=') ;
+                    PairList(n,2) = str2num(Oneline(pp+1:end)) ;
+                end
+                
+                if strcmp(Oneline,'}') && EnterZone
+                    EnterZone=false ;
+                    n=n+1 ;
+                end
+            end
+            PairList=PairList+1 ;
+            SwtichInd = PairList(:,2) <PairList(:,1) ;
+            PairList(SwtichInd,: ) =flip(PairList(SwtichInd,: ), 2) ;
+            PairList= unique(PairList, 'rows') ;
+            
+            obj.MutualTrapPair  =PairList  ;
+            
+            %             fclose(fffid);
             
             
         end
+        
         function getPcaTraj2(obj)
             % without specifying two nodes as X-dir, direct compare with
             % the first frame using absor
@@ -413,7 +686,7 @@ classdef oxDNATrajObject <handle
                 T_absor13= transpose(regParams.R*Traj(:,1:3,k)'+ regParams.t ) ;
                 T_absor46= transpose(regParams.R*Traj(:,4:6,k)' ) ;
                 T_absor79= transpose(regParams.R*Traj(:,7:9,k)' ) ;
- 
+                
                 %              end
                 PcaTraj(:,1:9,k) =[T_absor13 ,T_absor46, T_absor79 ] ;
                 
@@ -518,7 +791,7 @@ classdef oxDNATrajObject <handle
         %             title(strcat('Frame = ' ,num2str(frame)   )  )
         %             cd(obj.Spwd) ;
         %         end
-        function visualTraj(obj,frame,mode)
+        function pH=visualTraj(obj,frame,mode)
             if nargin==1;frame=1;end
             if   mode~=1 && isempty(  obj.PcaTraj)
                 fprintf(' Need to do PCA first !!  \n') ;
@@ -540,24 +813,31 @@ classdef oxDNATrajObject <handle
             for iF=1:length(frame)
                 %                 if mode==1
                 T=obj.Traj(:,:,frame(iF)) ;
-                %                 else
-                %                 T=obj.PcaTraj(:,:,frame(iF)) ;
-                %                 end
+%                 T= obj.NoDriftTraj(:,:,frame(iF)) ;
                 
-                BackBoneT=  T(:,1:3) +Coeff* T(:,4:6) ;
+                a2 = cross(T(:,7:9),T(:,4:6) ) ;
+                BackBoneT = T(:,1:3)  +obj.POS_MM_BACK1*T(:,4:6) + obj.POS_MM_BACK2*a2 ;
+                
+                %                 POS_MM_BACK1 = -0.3400 ;
+                %                 POS_MM_BACK2 = 0.3408 ;
+                
+                
+                %                 BackBoneT=  T(:,1:3) +Coeff* T(:,4:6) ;
                 [a0,b0]=hist(obj.Strand,unique(obj.Strand)) ;
                 CC=[iF,0, length(frame)-iF]/ length(frame) ;
                 pH=cell(length(frame),1) ;
                 for strandi=1:max(obj.Strand)
                     BaseInd=  find(obj.Strand==strandi) ;
-                    if  a0(strandi)>1000    %scaffold ribbon   CColor =  get(0,'defaultAxesColorOrder') ;   a0(strandi)==max(a0)
-                        pH{strandi}= plot3(BackBoneT(BaseInd,1)+iF*20  , BackBoneT(BaseInd,2)+iF*0 ,BackBoneT(BaseInd,3) , 'b') ;
+                    if  a0(strandi)>2000    %scaffold ribbon   CColor =  get(0,'defaultAxesColorOrder') ;   a0(strandi)==max(a0)
+                        pH{strandi}= plot3(BackBoneT(BaseInd,1)+iF*0  , BackBoneT(BaseInd,2)+iF*0 ,BackBoneT(BaseInd,3) , 'b') ;
                         pH{strandi}.UserData.RenderAs = 'Scaf' ;  cc_scaf=cc_scaf+1; pH{strandi}.UserData.Ind=cc_scaf;
                     else   %staple
-                        pH{strandi}=   plot3(BackBoneT(BaseInd,1)+iF*20 , BackBoneT(BaseInd,2)+iF*0 ,BackBoneT(BaseInd,3),'r'  ) ;
+                        pH{strandi}=   plot3(BackBoneT(BaseInd,1)+iF*0 , BackBoneT(BaseInd,2)+iF*0 ,BackBoneT(BaseInd,3),'r'  ) ;
                         pH{strandi}.UserData.RenderAs = 'Stap' ; cc_stap=cc_stap+1; pH{strandi}.UserData.Ind=cc_stap;
                     end
                     pH{strandi}.UserData.oxDNAStrandInd = strandi ;
+                    pH{strandi}.UserData.IniXYZ =BackBoneT(BaseInd,1:3) ;
+                    pH{strandi}.UserData.BaseID = BaseInd ;
                 end
                 
                 for strandi=1:max(obj.Strand)
@@ -648,11 +928,35 @@ classdef oxDNATrajObject <handle
                     end
                     f2.UserData.RightClickInd=PotentialHitsBaseInd(IndSelect) ;
             end
-            
-            
-            
-            
         end
+
+        function ExportLastConf(obj)
+            
+            LastConf = obj.Traj(:,1:9 ,end) ;
+%             LastConf(:,1:3) =   LastConf(:,1:3) -mean(  LastConf(:,1:3)) + [12 12 12 ] ; % hard
+%             boxsize =obj.Boxs ;
+            
+            LastConf(:,1:3) = LastConf(:,1:3) - mean(LastConf(:,1:3)) ; 
+            MMbox = max( LastConf(:,1:3)) ;
+            mmbox = min( LastConf(:,1:3)) ;
+            boxsize = 1.5 * max(MMbox- mmbox) ;
+                       
+%             boxsize=25 ; % hard
+            fprintf('Printing the last configuration at %s \n',obj.PathName );
+            cd(obj.PathName);       
+            file2_name='lastConf_1e8.conf';
+            fileID = fopen(file2_name,'w');
+            fprintf(fileID,'t = 10000000\n'); E0=0;
+            fprintf(fileID,'b = %9.6f %9.6f %9.6f\n',max(boxsize),max(boxsize),max(boxsize));
+            fprintf(fileID,'E = %8.6f %8.6f %8.6f\n',E0,E0,E0);            
+            for k=1:  size(LastConf,1)
+                fprintf(fileID,'%8.6f %8.6f %8.6f %8.6f %8.6f %8.6f %8.6f %8.6f %8.6f %2.1f %2.1f %2.1f %2.1f %2.1f %2.1f\n',LastConf(k,:),zeros(1,6) );  % changed NVec for primes of oxDNA
+            end
+            
+            fclose(fileID) ;
+            cd(obj.Spwd) ;
+        end
+        
         
         function ExportBildRibbonTraj(obj,Ribbon,iF,filename)
             
@@ -700,6 +1004,7 @@ classdef oxDNATrajObject <handle
                     %                         ColorRGB= CColor( mod(strandi,size(CColor,1))+1  ,:) ;
                     %                         scafShow=11
                     ColorRGB=[0.2,0.5,0.8]+0.15*rand(1,3);            %scaffold backbone
+                    %                     ColorRGB = [0.5 0.5 0.5 ] ;
                     %                                              ColorRGB=[0.8,0,0] ;
                     %                     ColorRGB= randRGB ;
                     fprintf('Scaffold length = %i \n', max(a0)  ) ;
@@ -756,8 +1061,17 @@ classdef oxDNATrajObject <handle
                     %                                                 Gc=hex2dec(RGBHex(3:4)) ;
                     %                                                 Bc=hex2dec(RGBHex(5:6))  ;
                     %                                                 BundleColor=[Rc,Gc ,  Bc]/256 ;
+%                     if length(BaseInd) == 36 % extended
+%                         BundleColor=[248,144,31]/255 ;
+%                     elseif  length(BaseInd) == 26 % shrink
+%                         BundleColor=[0.3,0.3,0.3] ;
+%                     else
+%                         BundleColor=[0.5,0,0] ;
+%                     end
+                    
                     
                     BundleColor=[0.8,0,0] ;
+                    %                     BundleColor=[0.5 0.5 0.5] ;
                     %                                                 BundleColor= rand(1,3) ;
                     fprintf(fileID , '\n'  )    ;
                     fprintf(fileID , '.color %8.6f %8.6f %8.6f \n',BundleColor+0*(0.5-rand(1,3))  )    ;
@@ -800,7 +1114,7 @@ classdef oxDNATrajObject <handle
             toc
         end
         
-    function ExportBildRibbonTraj_Ori(obj,Ribbon)
+        function ExportBildRibbonTraj_Ori(obj,Ribbon)
             
             if nargin==1;Ribbon=0;end
             Ribbon
@@ -866,19 +1180,19 @@ classdef oxDNATrajObject <handle
                         end
                     else  %staple
                         
-%                         BundleInd=  unique(BelongTransM(BaseInd)) ;
-%                         rgbDec=obj.colorRGB( BundleInd) ;
-%                         RGBHex=dec2hex(rgbDec,6 ) ;
-%                         Rc=hex2dec(RGBHex(1:2));
-%                         Gc=hex2dec(RGBHex(3:4)) ;
-%                         Bc=hex2dec(RGBHex(5:6))  ;
-%                         BundleColor=[Rc,Gc ,  Bc]/256 ;
+                        %                         BundleInd=  unique(BelongTransM(BaseInd)) ;
+                        %                         rgbDec=obj.colorRGB( BundleInd) ;
+                        %                         RGBHex=dec2hex(rgbDec,6 ) ;
+                        %                         Rc=hex2dec(RGBHex(1:2));
+                        %                         Gc=hex2dec(RGBHex(3:4)) ;
+                        %                         Bc=hex2dec(RGBHex(5:6))  ;
+                        %                         BundleColor=[Rc,Gc ,  Bc]/256 ;
                         BundleColor=[1,0,0] ;
                         
                         for kbs= 1:length(BaseInd)
                             if Ribbon==1  %only ribbon
-                                if kbs==length(BaseInd) 
-                                   fprintf(fileID , '.sphere %4.2f %4.2f %4.2f %4.2f \n \n',BackBoneB,obj.SphereR/2 ) ;    
+                                if kbs==length(BaseInd)
+                                    fprintf(fileID , '.sphere %4.2f %4.2f %4.2f %4.2f \n \n',BackBoneB,obj.SphereR/2 ) ;
                                     continue ;
                                 end  %# ribbon =N-1
                                 BackBoneA=  T(BaseInd(kbs),1:3) +Coeff* T(BaseInd(kbs),4:6) ;
@@ -886,7 +1200,7 @@ classdef oxDNATrajObject <handle
                                 %                             BaseA= T(BaseInd(kbs),1:3)-Coeff* T(BaseInd(kbs),4:6) ;
                                 fprintf(fileID , '.color %8.6f %8.6f %8.6f \n',BundleColor  )    ;
                                 fprintf(fileID , '.cylinder %4.2f %4.2f %4.2f %4.2f %4.2f %4.2f %4.2f \n',BackBoneA,BackBoneB,obj.SphereR/2 )    ;
-                                fprintf(fileID , '.sphere %4.2f %4.2f %4.2f %4.2f \n \n',BackBoneA,obj.SphereR/2 )    ; 
+                                fprintf(fileID , '.sphere %4.2f %4.2f %4.2f %4.2f \n \n',BackBoneA,obj.SphereR/2 )    ;
                             else  %with sphere on backbone and cylinder between
                                 
                                 BackBoneA=  T(BaseInd(kbs),1:3) +Coeff* T(BaseInd(kbs),4:6) ;
@@ -907,7 +1221,7 @@ classdef oxDNATrajObject <handle
             fprintf(' finish printing bild ribbon file \n' )
             cd(obj.Spwd);
             toc
-        end        
+        end
         function printCompChimera(obj,mode )
             if nargin==1;mode=1;end
             if mode==1

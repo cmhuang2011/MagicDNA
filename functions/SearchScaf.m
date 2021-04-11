@@ -56,9 +56,12 @@ else
     ScafOption.choice.NoScafXover.edit.String= num2str(numArr3) ; 
 end
 popXX=ScafOption.choice.minDist_btwXover.popup ;
+% opts.minDist_btwXover= str2num(popXX.String{popXX.Value} ) -6 ;
 opts.minDist_btwXover= str2num(popXX.String{popXX.Value} ) -2 ;
+
 GetHyperB.ScafOption= opts ;  %update to object
 drawnow;
+GetHyperB.CustomSkipAndInsertion = false; % whenever using routing algorithm, reset to Default
 % return
 %-------
 
@@ -130,7 +133,7 @@ hold on; axis  equal;
             % ForLegend=surface(nan, nan, 'Linestyle', 'none', 'Marker', 'none' );
 %                         ForLegend=line(nan, nan, 'Linestyle', 'none', 'Marker', 'none', 'Color', 'none');
 
-            hLg= legend(hSurf,'Click me for instructions','Location','northwest' ) ; hLg.String={' \rmScaffold (index \bf\color[rgb]{0.24,0.15,0.66}Start 5'' \color{black}to \color[rgb]{0.78,0.78,0.18}End 3''\rm\color{black})'};
+            hLg= legend(hSurf{1},'Click me for instructions','Location','northwest' ) ; hLg.String={' \rmScaffold (index \bf\color[rgb]{0.24,0.15,0.66}Start 5'' \color{black}to \color[rgb]{0.78,0.78,0.18}End 3''\rm\color{black})'};
             hLg.Interpreter='tex';        %latex
             hLg.Orientation='horizontal';
 %             ForLegend.Marker='.' ; ForLegend.Marker='none';
