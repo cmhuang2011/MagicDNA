@@ -32,6 +32,13 @@ https://www.dropbox.com/sh/li2vnw4n3qhbzp7/AACLJgFUOj2yU2BsiHVxHxUOa?dl=0
 https://www.dropbox.com/sh/26n182tcegruozn/AACp0h3ebhmV5dFahU_9pPVPa?dl=0
 
 
+Citation:
+MagicDNA is developed for scientific research in DNA nanotechnology. We kindly ask you to cite the following paper if the software is used. 
+
+Huang, CM., Kucinic, A., Johnson, J.A. et al. Integrated computer-aided engineering and design for DNA assemblies. Nat. Mater. (2021). https://doi.org/10.1038/s41563-021-00978-5
+
+
+
 Questions, comments, and suggestions to:
 Chao-Min Huang   
-huang.2011@osu.edu
+huang.2011@osu.edu or chaomin.huang@duke.edu
