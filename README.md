@@ -40,5 +40,8 @@ Huang, CM., Kucinic, A., Johnson, J.A. et al. Integrated computer-aided engineer
 
 
 Questions, comments, and suggestions to:
+Carlos Castro
+castro.39@osu.edu
+or
 Chao-Min Huang   
-huang.2011@osu.edu or chaomin.huang@duke.edu
+huang.2011@osu.edu 
