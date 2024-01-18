@@ -15,7 +15,7 @@ https://www.dropbox.com/s/3eh0fkr9bpouycz/freeform_MagicDNA.mlappinstall?dl=0
 
 Required: MATLAB v2017a and newer versions, Bioinformatics Toolbox, Statistics and Machine Learning Toolbox
 
-Tutorial download: https://www.dropbox.com/s/4f7t5hdiggmnf6f/MagicDNA_workshop.pptx?dl=0 
+Tutorial download: https://www.dropbox.com/scl/fi/1f7aav09omwyl2mae2m5w/MagicDNA_workshop.pptx?rlkey=d0wneg9h6cqy1d1h1xp041ilf&dl=0
 
 YouTube channel for tutorial movies: https://www.youtube.com/channel/UCpI3shjsdy89Xg2iVt-ZYCw
 
